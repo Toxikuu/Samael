@@ -1,0 +1,11 @@
+# binaries
+samael.exe
+
+# lists / key
+apikey.txt
+blacklist.txt
+safelist.txt
+weirdlist.txt
+
+# source code
+sourcecode.txt
