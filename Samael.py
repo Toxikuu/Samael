@@ -7,7 +7,7 @@ except ModuleNotFoundError:
     os.sys('pip install requests')
 
 # variables
-version = '5.0.1'
+version = '5.0.2'
 discord = "https://discord.gg/N3rVjjVEsv"
 script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
 config_file = f'{script_directory}/config.ini'
@@ -266,20 +266,24 @@ def readchat():
 
             # nicks
             if f"[Client thread/INFO]: [CHAT] Lilith > Found" in line and " likely nicked players: Possibly " in line:
-                if ',' in line and ', ' not in line:
-                    line = line.strip(',')
+
                 nickstart = line.index("Possibly ")
                 nickend = line.index('\n', nickstart+1)
                 name_nick = line[nickstart+9:nickend]
-                if devmode == 'y': print(f'Nick found: {name_nick}')
+                name_nick = name_nick.strip(', ')
+                if devmode == 'y':
+                    print(f'Nick found: {name_nick}')
+
                 rank = '[NICK?]'
-                try: antisniper(name_nick, rank)
+                try: 
+                    antisniper(name_nick, rank)
                 except: 
                     for safenick in safenicks:
                         if safenick in line:
                             pass
                         else:
-                            omgnick()
+                            if name_nick != '':
+                                omgnick()
 
             # Write record
             if "[Client thread/INFO]: [CHAT]   " in line and "WINNER!  " in line:
@@ -794,7 +798,7 @@ def antisniper(name, rank):
                     start = nline.index('Note: "')
                     end = nline.index('"\n', start+1)
                     note = nline[start+7:end]
-                    print(f' {c.Blue}>>{c.allDefault} {c.bgBlue} Note: {note} {c.allDefault} {c.Blue}<<{c.allDefault} ')
+                    print(f' {c.White}>>{c.allDefault} {c.bgLightBlue}{c.Black} Note: {note} {c.allDefault} {c.White}<<{c.allDefault} ')
 
         # Read record
         rec_lost_uuids = []
