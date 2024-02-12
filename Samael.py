@@ -1,16 +1,18 @@
 # import libraries
-import math, time, os, sys, configparser
+import math, time, os, sys, configparser, re
 
-try:
-    import requests
+try: import requests
 except ModuleNotFoundError:
     os.sys('pip install requests')
+    print('Automatically installing missing dependency "requests".\nYou\'re gonna have to restart Samael.')
+    time.sleep(5); quit
 
 # variables
-version = '5.0.2'
+version = '5.0.3'
 discord = "https://discord.gg/N3rVjjVEsv"
 script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
 config_file = f'{script_directory}/config.ini'
+config_ini = configparser.ConfigParser()
 
 # colors
 class c:
@@ -61,74 +63,84 @@ tSafe = f'{c.White}Safe{c.allDefault}'
 
 # config
 def readcfg():
-    config_object = configparser.ConfigParser()
     with open(config_file, 'r') as file_object:
-        config_object.read_file(file_object)
-        global devmode, blacklist, safelist, weirdlist, record, chat, notes, apikey, safenicks, rounding_precision, show_splash_screen, samaeluser, custom_ranks, autosafelist_win_count, autoblacklist_loss_count, delimiter_type
+        config_ini.read_file(file_object)
+        global cfg
+        class cfg:
+            devmode = config_ini.getboolean('devmode', 'dev')
 
-        devmode = config_object.get('devmode', 'dev')
+            blacklist = config_ini.get('paths', 'blacklist')
+            safelist = config_ini.get('paths', 'safelist')
+            weirdlist = config_ini.get('paths', 'weirdlist')
+            record = config_ini.get('paths',  'record')
+            chat = config_ini.get('paths', 'chat')
+            notes = config_ini.get('paths', 'notes')
 
-        blacklist = config_object.get('paths', 'blacklist')
-        safelist = config_object.get('paths', 'safelist')
-        weirdlist = config_object.get('paths', 'weirdlist')
-        record = config_object.get('paths',  'record')
-        chat = config_object.get('paths', 'chat')
-        notes = config_object.get('paths', 'notes')
+            apikey = config_ini.get('apikey', 'apikey')
 
-        apikey = config_object.get('apikey', 'apikey')
+            safenicks = config_ini.get('safenicks', 'safenicks')
 
-        safenicks = config_object.get('safenicks', 'safenicks')
+            rounding_precision = config_ini.getint('options', 'rounding_precision')
 
-        rounding_precision = int(config_object.get('options', 'rounding_precision'))
-        show_splash_screen = config_object.get('options', 'show_splash_screen')
+            samaeluser = config_ini.get('user', 'username')
 
-        samaeluser = config_object.get('user', 'username')
 
-        custom_ranks = config_object.get('ranks', 'custom_ranks')
+            autosafelist_win_count = config_ini.getint('autolist', 'autosafelist_win_count')
+            autoblacklist_loss_count = config_ini.getint('autolist', 'autoblacklist_loss_count')
 
-        autosafelist_win_count = int(config_object.get('autolist', 'autosafelist_win_count'))
-        autoblacklist_loss_count = int(config_object.get('autolist', 'autoblacklist_loss_count'))
+            delimiter_type = config_ini.getint('delimiter', 'delimiter_type')
 
-        delimiter_type = int(config_object.get('delimiter', 'delimiter_type'))
+            # fix list formatting
+            safenicks = list(safenicks.split(', '))
 
-        # fix list formatting
-        custom_ranks = list(custom_ranks.split(', '))
-        safenicks = list(safenicks.split(', '))
+            # stat toggles
+            nwl = config_ini.getboolean('stat toggles', 'nwl')
+            
+            sw_star = config_ini.getboolean('stat toggles', 'sw_star')
+            sw_kdr = config_ini.getboolean('stat toggles', 'sw_kdr')
+
+            bw_star = config_ini.getboolean('stat toggles', 'bw_star')
+            bw_fkdr = config_ini.getboolean('stat toggles', 'bw_fkdr')
+            bw_bblr = config_ini.getboolean('stat toggles', 'bw_bblr')
+            bw_kdr = config_ini.getboolean('stat toggles', 'bw_kdr')
+            bw_fksperstar = config_ini.getboolean('stat toggles', 'bw_fksperstar')
+
+            sumo_wlr = config_ini.getboolean('stat toggles', 'sumo_wlr')
+            sumo_bws = config_ini.getboolean('stat toggles', 'sumo_bws')
+            sumo_cws = config_ini.getboolean('stat toggles', 'sumo_cws')
+
+            uhc_wlr = config_ini.getboolean('stat toggles', 'uhc_wlr')
+            uhc_kdr = config_ini.getboolean('stat toggles', 'uhc_kdr')
+
+            duels_wlr = config_ini.getboolean('stat toggles', 'duels_wlr')
+            duels_wins = config_ini.getboolean('stat toggles', 'duels_wins')
+            duels_losses = config_ini.getboolean('stat toggles', 'duels_losses')
+            duels_bws = config_ini.getboolean('stat toggles', 'duels_bws')
+            duels_cws = config_ini.getboolean('stat toggles', 'duels_cws')
+
+            melee_accuracy = config_ini.getboolean('stat toggles', 'melee_accuracy')
+            combo_melee_accuracy = config_ini.getboolean('stat toggles', 'combo_melee_accuracy')
 
 readcfg()
-
+cfg_toggles = ['nwl', 'sw_star', 'sw_kdr', 'bw_star', 'bw_fkdr', 'bw_bblr', 'bw_kdr', 'bw_fksperstar', 'sumo_wlr', 
+               'sumo_bws', 'sumo_cws', 'uhc_wlr', 'uhc_kdr', 'duels_wlr', 'duels_wins', 'duels_losses', 'duels_bws', 'duels_cws', 'melee_accuracy',  'combo_melee_accuracy']
 
 # delimiter fix
-if delimiter_type == 0:
+if cfg.delimiter_type == 0:
     delimiter = '▌'
     print(delimiter)
-elif delimiter_type == 1:
+elif cfg.delimiter_type == 1:
     delimiter = '?'
 
-# confirms config validity
-checked_cfgvars = [devmode, blacklist, safelist, weirdlist, record, chat,  notes, apikey, rounding_precision, show_splash_screen, samaeluser, autosafelist_win_count, autoblacklist_loss_count] 
-cfgerrors = 0
-for cfgvar in checked_cfgvars:
-    if cfgvar == "":
-        cfgerrors += 1
-
-if cfgerrors != 0:  
-    print(f"\n{c.bgRed} >> EMPTY VALUE FOR {cfgerrors} VARIABLES IN CONFIG << {c.allDefault}\n")
-
-samael_lists = [blacklist, safelist, weirdlist]
-
-# rnklist
-rnklist = ['[MVP++]', '[MVP+]', '[MVP]', '[VIP+]', '[VIP]', '[ADMIN]', '[YOUTUBE]', '§d[? GG]', '§6[KING§c++§6]', '§0[UHC]', '§d[NEA?]', '§0[TOX]', '§0[GOLF§1+++§0]', '§5[ASHLYN]', '§0[LESBIAN]']
-if custom_ranks != '':
-    rnklist.extend(custom_ranks)
+# main lists
+samael_lists = [cfg.blacklist, cfg.safelist, cfg.weirdlist]
 
 # devmode
-if devmode == 'y':
+if cfg.devmode:
     print('Launching in devmode\n\n')
     with open(config_file, 'r') as file_object_dev:
         config_data_dev = file_object_dev.read()
     print(config_data_dev)
-    print(f'rnklist: {rnklist}')
 
 # some functions
 def getInfo(call):
@@ -189,6 +201,18 @@ def remove_none(filename):
     with open(filename, 'w') as f:
         f.write(filedata)
 
+def set_all_true_in_section(section):
+    for option in config_ini.options(section):
+        config_ini.set(section, option, 'True')
+        with open(config_file, 'w') as file_object:
+            config_ini.write(file_object)
+
+def set_all_false_in_section(section):
+    for option in config_ini.options(section):
+        config_ini.set(section, option, 'False')
+        with open(config_file, 'w') as file_object:
+            config_ini.write(file_object)
+
 # dd fixes file formatting (removes None, \n, and duplicate uuids)
 def dd(file):
     remove_none(file)
@@ -206,27 +230,26 @@ def omgnick():
     print(f"{c.bgDefault}{c.LightMagenta}      -----------------------------    {c.White}")
 
 # splash screen
-if show_splash_screen == 'y':
-    print("\n")
-    print(f"{c.Red}███████╗ █████╗ ███╗   ███╗ █████╗ ███████╗██╗     ")
-    print(f"{c.Red}██╔════╝██╔══██╗████╗ ████║██╔══██╗██╔════╝██║     ")
-    print(f"{c.Red}███████╗███████║██╔████╔██║███████║█████╗  ██║     ")
-    print(f"{c.Red}╚════██║██╔══██║██║╚██╔╝██║██╔══██║██╔══╝  ██║     ")
-    print(f"{c.Red}███████║██║  ██║██║ ╚═╝ ██║██║  ██║███████╗███████╗")
-    print(f"{c.Red}╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝")
-                                                                                                            
+print("\n")
+print(f"{c.Red}███████╗ █████╗ ███╗   ███╗ █████╗ ███████╗██╗     ")
+print(f"{c.Red}██╔════╝██╔══██╗████╗ ████║██╔══██╗██╔════╝██║     ")
+print(f"{c.Red}███████╗███████║██╔████╔██║███████║█████╗  ██║     ")
+print(f"{c.Red}╚════██║██╔══██║██║╚██╔╝██║██╔══██║██╔══╝  ██║     ")
+print(f"{c.Red}███████║██║  ██║██║ ╚═╝ ██║██║  ██║███████╗███████╗")
+print(f"{c.Red}╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝")
+                                                                                                        
 
-    print(f"{c.bgDefault}{c.White}\n {c.stBold}>>> Version {version}{c.allDefault}")
-    print(f"{c.bgDefault}{c.White} > Use alongside Lilith")
-    print(f"{c.bgDefault}{c.White} > Made by Toxikuu, Hollow, & Scycle")
-    print(f"{c.bgDefault}{c.White} > Special thanks to:")
-    print(f"{c.bgDefault}{c.White}     > Nolqk, Zani, Sedged, Yhuvko, Praxzz, Virse, Plonk, i5tar, Nea, Nuclear")
-    print(f"{c.bgDefault}{c.White} > Join the Discord! {discord}")
+print(f"{c.bgDefault}{c.White}\n {c.stBold}>>> Version {version}{c.allDefault}")
+print(f"{c.bgDefault}{c.White} > Use alongside Lilith")
+print(f"{c.bgDefault}{c.White} > Made by Toxikuu, Hollow, & Scycle")
+print(f"{c.bgDefault}{c.White} > Special thanks to:")
+print(f"{c.bgDefault}{c.White}     > Nolqk, Zani, Sedged, Yhuvko, Praxzz, Virse, Plonk, i5tar, Nea, Nuclear")
+print(f"{c.bgDefault}{c.White} > Join the Discord! {discord}")
 
-    print("\n\n")
+print("\n\n")
 
 # clears record on start
-with open(record, 'w') as clrrec:
+with open(cfg.record, 'w') as clrrec:
     clrrec.write('')
 
 # read chat
@@ -234,35 +257,16 @@ def readchat():
     while True:
 
 
-        chatlines = follow(open(chat, 'r'))
+        chatlines = follow(open(cfg.chat, 'r'))
         for line in chatlines:
-            
-            # sc
-            for rnk in rnklist:
-                if f"[Client thread/INFO]: [CHAT] {delimiter} {rnk}" in line:
-                    if devmode == 'y': print('Name detected')
-                    rnklen = len(rnk)
-                    start = line.index(rnk)
-                    end = line.index('Lvl:',start+1)
-
-                    name = line[start+(rnklen+1):end-1]
-                    antisniper(name, rnk)
 
             # mysterybox fix
             if "[Client thread/INFO]: [CHAT] ? " in line and "found a" in line and "Mystery Box" in line:
                 pass
 
-            # nons
-            elif f"[Client thread/INFO]: [CHAT] {delimiter} " in line and f"[Client thread/INFO]: [CHAT] {delimiter} [" not in line and f"[Client thread/INFO]: [CHAT] {delimiter} W/L:" not in line:
-                if "§" not in line:
-                    start = line.index(f'{delimiter} ')
-                    end = line.index('Lvl:',start+1)
-
-                    name = line[start+2:end-1]
-                    rank = "[NON]"
-                    antisniper(name, rank)
-                else:
-                    pass
+            # mysterydust fix
+            if "[Client thread/INFO]: [CHAT] ? You earned " in line and "Mystery Dust!" in line:
+                pass
 
             # nicks
             if f"[Client thread/INFO]: [CHAT] Lilith > Found" in line and " likely nicked players: Possibly " in line:
@@ -271,60 +275,99 @@ def readchat():
                 nickend = line.index('\n', nickstart+1)
                 name_nick = line[nickstart+9:nickend]
                 name_nick = name_nick.strip(', ')
-                if devmode == 'y':
-                    print(f'Nick found: {name_nick}')
+                if cfg.devmode: print(f'Nick found: {name_nick}')
 
-                rank = '[NICK?]'
                 try: 
-                    antisniper(name_nick, rank)
+                    if name_nick != '':
+                        antisniper(name_nick, '[NICK?]')
+                    else:
+                        if cfg.devmode: print(f'Skipped antisniper() since name_nick = <{name_nick}>')
                 except: 
-                    for safenick in safenicks:
-                        if safenick in line:
-                            pass
-                        else:
-                            if name_nick != '':
-                                omgnick()
+                    if name_nick != '' and name_nick not in cfg.safenicks:
+                        omgnick()
+
+            # /sc name isolation
+            if f"[Client thread/INFO]: [CHAT] {delimiter}" in line and f"[Client thread/INFO]: [CHAT] {delimiter} W/L: " not in line:
+
+                isolation1start = line.index('[CHAT]')
+                isolation1end = line.index('Lvl:')
+                isolation1 = line[isolation1start+7:isolation1end]
+                isolation1 = f"{isolation1}$"
+
+                if cfg.devmode: print("\n$\nIsolation1:", isolation1)
+                if '[' and ']' in isolation1:
+                    isolationnamestart = isolation1.index('] ')
+                    isolationnameend = isolation1.index('$')
+                    isolationname = isolation1[isolationnamestart+2:isolationnameend]
+                    isolationname = isolationname.strip()
+                    if cfg.devmode: print("Isolated name:", isolationname)
+
+                    isolationrankstart = isolation1.index('[')
+                    isolationrankend = isolation1.index(']')
+                    isolationrank = isolation1[isolationrankstart:isolationrankend+1]
+                    if '§' in isolationrank:
+                        isolationrank = re.sub('§.', '', isolationrank)
+                    if cfg.devmode: print("Isolated rank:", isolationrank)
+
+                    antisniper(isolationname, isolationrank)
+                else:
+                    isolationnonstart = isolation1.index(delimiter)
+                    isolationnonend = isolation1.index('$')
+                    isolationnon = isolation1[isolationnonstart+1:isolationnonend]
+                    isolationnon = isolationnon.strip()
+                    if cfg.devmode: print("Isolated non:", isolationnon)
+
+                    antisniper(isolationnon, '[NON]')
+
 
             # Write record
             if "[Client thread/INFO]: [CHAT]   " in line and "WINNER!  " in line:
-                start = line.index('WINNER!  ')
-                end = line.index('\n',start+1)
+                iso1start = line.index('WINNER!')
+                iso1end = line.index('\n')
+                iso1 = (line[iso1start+7:iso1end]).strip()
 
-                won_opponent = line[start+9:end]
-                for rnk in rnklist:
-                    if rnk in won_opponent:
-                        won_opponent = won_opponent.replace(rnk, '')
-                won_opponent = won_opponent.strip()
+                if '[' and ']' in iso1:
+                    iso1 = f'{iso1}$'
+                    iso2start = iso1.index(']')
+                    iso2end = iso1.index('$')
+                    iso2 = iso1[iso2start+2:iso2end]
+                    won_opponent = iso2
+                else:
+                    won_opponent = iso1
                 
                 print(f"\n [i] You won against {won_opponent}")
                 won_uuid = igntouuid(won_opponent)
                 print(f"\n [-] UUID: {won_uuid}")
 
-                with open(record, 'a') as wrec:
+                with open(cfg.record, 'a') as wrec:
                     wrec.write(f"Won against {won_uuid}\n")
             
             elif "[Client thread/INFO]: [CHAT]   " in line and "WINNER!\n" in line:
-                start = line.index('  ')
-                end = line.index('WINNER!',start+1)
-                lost_opponent = line[start+2:end-1]
-                lost_opponent = lost_opponent = lost_opponent.replace(samaeluser, '')
-                for rnk in rnklist:
-                    if rnk in lost_opponent:
-                        lost_opponent = lost_opponent.replace(rnk, '')
-                lost_opponent = lost_opponent.strip()
+                isol1start = line.index(cfg.samaeluser)
+                isol1end = line.index('WINNER!')
+                isol1 = (line[isol1start+len(cfg.samaeluser):isol1end]).strip()
+
+                if '[' and ']' in isol1:
+                    isol1 = f'{isol1}$'
+                    isol2start = isol1.index(']')
+                    isol2end = isol1.index('$')
+                    isol2 = isol1[isol2start+2:isol2end]
+                    lost_opponent = isol2
+                else:
+                    lost_opponent = isol1
 
                 print(f"\n [i] You lost to {lost_opponent}")
                 lost_uuid = igntouuid(lost_opponent)
                 print(f"\n [-] UUID: {lost_uuid}")
 
-                with open(record, 'a') as wrec:
+                with open(cfg.record, 'a') as wrec:
                     wrec.write(f"Lost to {lost_uuid}\n")
             
 
             # commands
             addcommands = ['b', 's', 'w']
             for addcommand in addcommands:
-                if f"[Client thread/INFO]: [CHAT] -{addcommand}" in line:
+                if f"[Client thread/INFO]: [CHAT] -{addcommand} " in line:
                     start = line.index(f'-{addcommand}')
                     end = line.index('\n', start+1)
                     name = line[start+3:end]
@@ -335,21 +378,21 @@ def readchat():
 
                         if addcommand == 'b':
                             print(f"> Blacklisting", uuid)
-                            with open(f"{blacklist}", "a") as bl:
+                            with open(f"{cfg.blacklist}", "a") as bl:
                                 bl.write(f"\n{uuid}\n")
                             print(f"> Added {name} to blacklist\n")
 
 
                         elif addcommand == 's':
                             print(f"> Safelisting", uuid)
-                            with open(f"{safelist}", "a") as sl:
+                            with open(f"{cfg.safelist}", "a") as sl:
                                 sl.write(f"\n{uuid}\n")
                             print(f"> Added {name} to safelist\n")
 
 
                         elif addcommand == 'w':
                             print(f"> Weirdlisting", uuid)
-                            with open(f"{weirdlist}", "a") as wl:
+                            with open(f"{cfg.weirdlist}", "a") as wl:
                                 wl.write(f"\n{uuid}\n")
                             print(f"> Added {name} to weirdlist\n")
 
@@ -360,7 +403,7 @@ def readchat():
 
             removecommands = ['rb', 'rs', 'rw']
             for removecommand in removecommands:
-                if f"[Client thread/INFO]: [CHAT] -{removecommand}" in line:
+                if f"[Client thread/INFO]: [CHAT] -{removecommand} " in line:
                     start = line.index(f'-{removecommand}')
                     end = line.index('\n', start+1)
                     name = line[start+4:end]
@@ -371,26 +414,26 @@ def readchat():
 
                         if removecommand == 'rb':
                             print(f"> Removing {uuid} from blacklist")
-                            with open(f"{blacklist}", "r") as findbl:
+                            with open(f"{cfg.blacklist}", "r") as findbl:
                                 data = findbl.read()
                                 data = data.replace(uuid, '\n')
-                            with open(f"{safelist}", "w") as findbl:
+                            with open(f"{cfg.safelist}", "w") as findbl:
                                 findbl.write(data)
 
                         elif removecommand == 'rs':
                             print(f"> Removing {uuid} from safelist")
-                            with open(f"{safelist}", "r") as findsl:
+                            with open(f"{cfg.safelist}", "r") as findsl:
                                 data = findsl.read()
                                 data = data.replace(uuid, '\n')
-                            with open(f"{safelist}", "w") as findsl:
+                            with open(f"{cfg.safelist}", "w") as findsl:
                                 findsl.write(data)
 
                         elif removecommand == 'rw':
                             print(f"> Removing {uuid} from weirdlist")
-                            with open(f"{weirdlist}", "r") as findwl:
+                            with open(f"{cfg.weirdlist}", "r") as findwl:
                                 data = findwl.read()
                                 data = data.replace(uuid, '\n')
-                            with open(f"{weirdlist}", "w") as findwl:
+                            with open(f"{cfg.weirdlist}", "w") as findwl:
                                 findwl.write(data)
 
                     except KeyError:
@@ -403,18 +446,18 @@ def readchat():
 
                 print(f"\n> Updating api key")
 
-                config = configparser.ConfigParser()
-                config.read(config_file)
-                config.set('apikey', 'apikey', apikey)
+                config_ini.read(config_file)
+                config_ini.set('apikey', 'apikey', apikey)
 
                 with open(config_file, 'w') as file_object:
-                    config.write(file_object)
+                    config_ini.write(file_object)
                 print(f"> Successfully updated")
                 readcfg()
 
 
-            if "[Client thread/INFO]: [CHAT] -refresh" in line:
+            if "[Client thread/INFO]: [CHAT] -refresh" in line or "[Client thread/INFO]: [CHAT] -reload" in line:
                 readcfg()
+                print('Reloaded config!')
 
             if "[Client thread/INFO]: [CHAT] -dd" in line:
                 for samael_list in samael_lists:
@@ -422,27 +465,27 @@ def readchat():
                 print('Fixed list formatting!')
 
             if "[Client thread/INFO]: [CHAT] -filter" in line:
-                with open(safelist, 'r') as sl:
+                with open(cfg.safelist, 'r') as sl:
                     slist = sl.readlines()
-                with open(blacklist, 'r') as bl:
+                with open(cfg.blacklist, 'r') as bl:
                     blist = bl.readlines()
                 
                 new_safelist, new_blacklist = filter_safelist_and_blacklist(slist, blist)
                 
-                write_list_to_txt(new_safelist, safelist)
-                write_list_to_txt(new_blacklist, blacklist)
+                write_list_to_txt(new_safelist, cfg.safelist)
+                write_list_to_txt(new_blacklist, cfg.blacklist)
                 print('Filtered lists')
                 for samael_list in samael_lists:
                     dd(samael_list)
                 print('Fixed list formatting!')
 
             if "[Client thread/INFO]: [CHAT] -clr" in line:
-                with open(record, 'w') as clrrec:
+                with open(cfg.record, 'w') as clrrec:
                     clrrec.write('')
                 print('Cleared record!')
 
             if "[Client thread/INFO]: [CHAT] -note" in line:
-                print(line)
+                if cfg.devmode: print(line)
                 namestart = line.index('-note')
                 nameend = line.index(' "', namestart+1)
                 name = line[namestart+6:nameend]
@@ -457,11 +500,73 @@ def readchat():
 
                     print(f" [n] UUID: {note_uuid}")
                     print(f" [n] Taking notes")
-                    with open(notes, 'a') as nappend:
+                    with open(cfg.notes, 'a') as nappend:
                         nappend.write(f'Target: {name} UUID: {note_uuid} Note: "{note}"\n')
                     print(f" [n] Noted {name}")
                 except:
                     print(f" [n] Note error")
+
+            if "[Client thread/INFO]: [CHAT] -delimiter " in line:
+                argstart = line.index('-delimiter')
+                argend = line.index('\n',argstart+1)
+                arg = line[argstart+11:argend]
+
+                if arg == '1' or '0':
+                    config_ini.read(config_file)
+                    config_ini.set('delimiter', 'delimiter_type', arg)
+
+                    with open(config_file, 'w') as file_object:
+                        config_ini.write(file_object)
+
+                    print(f'[c] Set delimiter type to {arg}')
+                    readcfg()
+
+                else:
+                    print(f'[c] Invalid argument for delimiter type! (Valid arguments are 0 and 1)')
+
+            if "[Client thread/INFO]: [CHAT] -dev" in line:
+                config_ini.read(config_file)
+                if cfg.devmode:
+                    config_ini.set('devmode', 'dev', 'False')
+                else:
+                    config_ini.set('devmode', 'dev', 'True')
+
+                with open(config_file, 'w') as file_object:
+                    config_ini.write(file_object)
+                readcfg()
+                print(f'[c] Set devmode to {cfg.devmode}')
+
+            if "[Client thread/INFO]: [CHAT] -toggle " in line:
+                argstart = line.index('-toggle')
+                argend = line.index('\n',argstart+1)
+                arg = line[argstart+8:argend]
+
+                if arg in cfg_toggles:
+                    config_ini.read(config_file)
+                    if config_ini.getboolean('stat toggles', arg):
+                        config_ini.set('stat toggles', arg, 'False')
+                    else:
+                        config_ini.set('stat toggles', arg, 'True')
+
+                    with open(config_file, 'w') as file_object:
+                        config_ini.write(file_object)
+
+                    readcfg()
+                    status = config_ini.getboolean('stat toggles', arg)
+                    print(f' [c] Toggled {arg} to {status}')
+                
+                elif arg == 'allon':
+                    set_all_true_in_section('stat toggles')
+                    readcfg()
+                    print(' [c] Toggled all on')
+
+                elif arg == 'alloff':
+                    set_all_false_in_section('stat toggles')
+                    readcfg()
+                    print(' [c] Toggled all off')
+
+                else:
+                    print(f' [c] Invalid argument: {arg}')
 
 
 # antisniper
@@ -469,389 +574,409 @@ def antisniper(name, rank):
         print(f"\n\n{c.stBold}Checking: {rank} {name}{c.allDefault}")   
 
         uuid = igntouuid(name)
-        
-        url = f"https://api.hypixel.net/player?key={apikey}&uuid={uuid}"
-        data = getInfo(url)
+        if uuid != None:
+            url = f"https://api.hypixel.net/player?key={cfg.apikey}&uuid={uuid}"
+            data = getInfo(url)
 
+            # BEDWARS
+            try: stat_bedwars_star = data["player"]["achievements"]["bedwars_level"]
+            except KeyError: stat_bedwars_star = 0
 
-        # BEDWARS
-        try: stat_bedwars_star = data["player"]["achievements"]["bedwars_level"]
-        except KeyError: stat_bedwars_star = 0
+            try: stat_bedwars_final_kills = data["player"]["stats"]["Bedwars"]["final_kills_bedwars"]
+            except KeyError: stat_bedwars_final_kills = 0
 
-        try: stat_bedwars_final_kills = data["player"]["stats"]["Bedwars"]["final_kills_bedwars"]
-        except KeyError: stat_bedwars_final_kills = 0
+            try: stat_bedwars_final_deaths = data["player"]["stats"]["Bedwars"]["final_deaths_bedwars"]
+            except KeyError: stat_bedwars_final_deaths = 0
 
-        try: stat_bedwars_final_deaths = data["player"]["stats"]["Bedwars"]["final_deaths_bedwars"]
-        except KeyError: stat_bedwars_final_deaths = 0
+            try: stat_bedwars_beds_broken = data["player"]["stats"]["Bedwars"]["beds_broken_bedwars"]
+            except KeyError: stat_bedwars_beds_broken = 0
 
-        try: stat_bedwars_beds_broken = data["player"]["stats"]["Bedwars"]["beds_broken_bedwars"]
-        except KeyError: stat_bedwars_beds_broken = 0
+            try: stat_bedwars_beds_lost = data["player"]["stats"]["Bedwars"]["beds_lost_bedwars"]
+            except KeyError: stat_bedwars_beds_lost = 0
 
-        try: stat_bedwars_beds_lost = data["player"]["stats"]["Bedwars"]["beds_lost_bedwars"]
-        except KeyError: stat_bedwars_beds_lost = 0
+            try: stat_bw_kills = data["player"]["stats"]["Bedwars"]["kills_bedwars"]
+            except KeyError: stat_bw_kills = 0
 
-        try: stat_bw_kills = data["player"]["stats"]["Bedwars"]["kills_bedwars"]
-        except KeyError: stat_bw_kills = 0
-
-        try: stat_bw_deaths = data["player"]["stats"]["Bedwars"]["deaths_bedwars"]
-        except KeyError: stat_bw_deaths = 0
-        
-        stat_bblr = round((stat_bedwars_beds_broken/max(stat_bedwars_beds_lost,1)),rounding_precision)
-        stat_fkdr = round((stat_bedwars_final_kills/max(stat_bedwars_final_deaths,1)), rounding_precision)
-        stat_bw_kdr = round(stat_bw_kills/max(stat_bw_deaths,1), rounding_precision)
-        stat_bw_fksperstar = round(stat_bedwars_final_kills/max(stat_bedwars_star,1), rounding_precision)
-
-
-        # SKYWARS
-        try: stat_level_formatted = data["player"]["stats"]["SkyWars"]["levelFormatted"]
-        except KeyError: stat_level_formatted = "xx0x"
-
-        try: stat_skywars_kills = data["player"]["stats"]["SkyWars"]["kills"]
-        except KeyError: stat_skywars_kills = 0
-
-        try: stat_skywars_deaths = data["player"]["stats"]["SkyWars"]["deaths"]
-        except KeyError: stat_skywars_deaths = 0
-
-        stat_skywars_kdr = round((stat_skywars_kills/max(stat_skywars_deaths,1)), rounding_precision)
-        swstar = stat_level_formatted[2:-1]+" ☆"
-        intswstar = int(stat_level_formatted[2:-1])
-
-
-        # SUMO
-        try: stat_sumo_duel_wins = data["player"]["stats"]["Duels"]["sumo_duel_wins"]
-        except KeyError: stat_sumo_duel_wins = 0
-
-        try: stat_sumo_duel_losses = data["player"]["stats"]["Duels"]["sumo_duel_losses"]
-        except KeyError: stat_sumo_duel_losses = 0  
-
-        try: stat_sumo_bws = data["player"]["stats"]["Duels"]["best_sumo_winstreak"]
-        except KeyError: stat_sumo_bws = 0
-
-        try: stat_sumo_cws = data["player"]["stats"]["Duels"]["current_sumo_winstreak"]
-        except KeyError: stat_sumo_cws = 0
-
-        sumowlr = round((stat_sumo_duel_wins/max(stat_sumo_duel_losses, 1)), rounding_precision)
-
-
-        # UHC DUELS
-        try: stat_uhc_duel_wins = data["player"]["stats"]["Duels"]["uhc_duel_wins"]
-        except KeyError: stat_uhc_duel_wins = 0
-
-        try: stat_uhc_duel_losses = data["player"]["stats"]["Duels"]["uhc_duel_losses"]
-        except KeyError: stat_uhc_duel_losses = 0
-
-        uhcwlr = round((stat_uhc_duel_wins/max(stat_uhc_duel_losses, 1)), rounding_precision)
-
-
-        # REAL UHC
-        try: stat_UHC_kills = data["player"]["stats"]["UHC"]["kills_solo"] + data["player"]["stats"]["UHC"]["kills"]
-        except KeyError: stat_UHC_kills = 0
-
-        try: stat_UHC_deaths = data["player"]["stats"]["UHC"]["deaths_solo"] + data["player"]["stats"]["UHC"]["deaths"]
-        except KeyError: stat_UHC_deaths = 0
-
-        uhckdr = round((stat_UHC_kills/max(stat_UHC_deaths, 1)), rounding_precision)
-
-
-        # GENERAL DUELS
-        try: stat_duels_wins = data["player"]["stats"]["Duels"]["wins"]
-        except KeyError: stat_duels_wins = 0
-
-        try: stat_duels_losses = data["player"]["stats"]["Duels"]["losses"]
-        except KeyError: stat_duels_losses = 0
-
-        try: stat_duels_bws = data["player"]["stats"]["Duels"]["best_overall_winstreak"]
-        except KeyError: stat_duels_bws = 0
-
-        try: stat_duels_cws = data["player"]["stats"]["Duels"]["current_winstreak"]
-        except KeyError: stat_duels_cws = 0
-
-        wlr = round((stat_duels_wins/max(stat_duels_losses, 1)), rounding_precision)
-
-        # MELEE
-        try: stat_duels_melee_hits = data["player"]["stats"]["Duels"]["melee_hits"]
-        except KeyError: stat_duels_melee_hits = 0
-
-        try: stat_duels_melee_swings = data["player"]["stats"]["Duels"]["melee_swings"]
-        except KeyError: stat_duels_melee_swings = 0
-
-        try: stat_duels_combo_melee_hits = data["player"]["stats"]["Duels"]["combo_duel_melee_hits"]
-        except KeyError: stat_duels_combo_melee_hits = 0
-
-        try: stat_duels_combo_melee_swings = data["player"]["stats"]["Duels"]["combo_duel_melee_swings"]
-        except KeyError: stat_duels_combo_melee_swings = 0
-
-        nocombomeleehits = stat_duels_melee_hits-stat_duels_combo_melee_hits
-        nocombomeleeswings = stat_duels_melee_swings-stat_duels_combo_melee_swings
-        stat_melee_accuracy = round((nocombomeleehits/max(nocombomeleeswings,1)*100), rounding_precision)
-        stat_combo_melee_accuracy = round((stat_duels_combo_melee_hits/max(stat_duels_combo_melee_swings,1)*100), rounding_precision)
-
-        # NWL
-        try: hypixelxp = data["player"]["networkExp"]
-        except KeyError: hypixelxp = 0
-
-        nwl = round(((math.sqrt((2 * hypixelxp) + 30625) / 50) - 2.5), rounding_precision)
-
-
-        # DISPLAY STATS
-        print(f"{c.bgDefault}{c.DarkGray}UUID:", uuid)
-        print(f"{c.bgDefault}{c.White}------------------------------------")
-        if 15 < nwl < 100:
-            print(f"{tSafe}    ||   NWL: {nwl}") 
-        elif (100 < nwl < 200) or (5 < nwl < 15):
-            print(f"{tRisky}   ||   NWL: {c.Yellow}{nwl}")
-        elif nwl < 5:
-            print(f"{tDanger}  ||   NWL: {c.Red}{nwl}")
-        else:
-            print(f"{tDanger}  ||   NWL: {c.Red}{nwl}")
-
-        if 0 < intswstar < 10:
-            print(f"{tSafe}    ||   SW star: {swstar}")
-        elif intswstar < 15 or intswstar == 0:
-            print(f"{tRisky}   ||   SW star: {c.Yellow}{swstar}")
-        elif intswstar > 15:
-            print(f"{tDanger}  ||   SW star: {c.Red}{swstar}")
-
-        if stat_skywars_kdr < 1:
-            print(f"{tSafe}    ||   SW kdr: {stat_skywars_kdr}")
-        elif stat_skywars_kdr > 1 and stat_skywars_kdr < 2:
-            print(f"{tRisky}   ||   SW kdr: {c.Yellow}{stat_skywars_kdr}")
-        elif stat_skywars_kdr > 2:
-            print(f"{tDanger}  ||   SW kdr: {c.Red}{stat_skywars_kdr}")
-
-        if stat_bedwars_star < 200 and stat_bedwars_star != 0:
-            print(f"{tSafe}    ||   BW star: {stat_bedwars_star} ☆")
-        elif stat_bedwars_star > 200 and stat_bedwars_star < 350:
-            print(f"{tRisky}   ||   BW star: {c.Yellow}{stat_bedwars_star} ☆")
-        elif stat_bedwars_star > 350 or stat_bedwars_star == 0:
-            print(f"{tDanger}  ||   BW star: {c.Red}{stat_bedwars_star} ☆")
-
-        if stat_fkdr < 2 and stat_fkdr != 0:
-            print(f"{tSafe}    ||   FKDR: {stat_fkdr}")
-        elif stat_fkdr > 2 and stat_fkdr < 3.5:
-            print(f"{tRisky}   ||   FKDR: {c.Yellow}{stat_fkdr}")
-        elif stat_fkdr > 3.5:
-            print(f"{tDanger}  ||   FKDR: {c.Red}{stat_fkdr}")
-        else:
-            print(f"{tRisky}   ||   FKDR: {c.Yellow}{stat_fkdr}")
-
-        if stat_bblr < 1.4 and stat_bblr != 0:
-            print(f"{tSafe}    ||   BBLR: {stat_bblr}")
-        elif stat_bblr > 1.4 and stat_bblr < 2.8:
-            print(f"{tRisky}   ||   BBLR: {c.Yellow}{stat_bblr}")
-        elif stat_bblr > 2.8:
-            print(f"{tDanger}  ||   BBLR: {c.Red}{stat_bblr}")
-        else:
-            print(f"{tRisky}   ||   BBLR: {c.Yellow}{stat_bblr}")    
-        
-        if stat_bw_kdr < 1.2:
-            print(f"{tSafe}    ||   BW kdr: {stat_bw_kdr}")
-        elif stat_bw_kdr > 1.2 and stat_bw_kdr < 2.4:
-            print(f"{tRisky}   ||   BW kdr: {c.Yellow}{stat_bw_kdr}")
-        elif stat_bw_kdr > 2.4:
-            print(f"{tDanger}  ||   BW kdr: {c.Red}{stat_bw_kdr}")
-        
-        if stat_bw_fksperstar < 25:
-            print(f"{tSafe}    ||   BW fks/star: {stat_bw_fksperstar}")
-        elif stat_bw_fksperstar > 25 and stat_bw_fksperstar < 50:
-            print(f"{tRisky}   ||   BW fks/star: {c.Yellow}{stat_bw_fksperstar}")
-        elif stat_bw_fksperstar > 50:
-            print(f"{tDanger}  ||   BW fks/star: {c.Red}{stat_bw_fksperstar}")
-        
-        if sumowlr < 1.1:
-            print(f"{tSafe}    ||   Sumo wlr: {sumowlr}")
-        elif sumowlr > 1.1 and sumowlr < 1.6:
-            print(f"{tRisky}   ||   Sumo wlr: {c.Yellow}{sumowlr}")
-        elif sumowlr > 1.6:
-            print(f"{tDanger}  ||   Sumo wlr: {c.Red}{sumowlr}")   
-        
-        if stat_sumo_bws < 10 and stat_sumo_bws != 0:
-            print(f"{tSafe}    ||   Sumo bws: {stat_sumo_bws}")
-        elif stat_sumo_bws > 10 and stat_sumo_bws < 25:
-            print(f"{tRisky}   ||   Sumo bws: {c.Yellow}{stat_sumo_bws}")
-        elif stat_sumo_bws > 25 or (stat_sumo_bws == 0 and stat_sumo_duel_wins > 0):
-            print(f"{tDanger}  ||   Sumo bws: {c.Red}{stat_sumo_bws}")
-        else:
-            print(f"{tRisky}   ||   Sumo bws: {c.Yellow}{stat_sumo_bws}")
-
-        if stat_sumo_cws < 5:
-            print(f"{tSafe}    ||   Sumo cws: {stat_sumo_cws}")
-        elif stat_sumo_cws > 5 and stat_sumo_cws < 10:
-            print(f"{tRisky}   ||   Sumo cws: {c.Yellow}{stat_sumo_cws}")
-        elif stat_sumo_cws > 10:
-            print(f"{tDanger}  ||   Sumo cws: {c.Red}{stat_sumo_cws}")
-        else:
-            print(f"{tSafe}    ||   Sumo cws: {stat_sumo_cws}")
-        
-        if uhcwlr < 1:
-            print(f"{tSafe}    ||   UHCD wlr: {uhcwlr}")
-        elif uhcwlr > 1 and uhcwlr < 2.5:
-            print(f"{tRisky}   ||   UHCD wlr: {c.Yellow}{uhcwlr}")
-        elif uhcwlr > 2.5:
-            print(f"{tDanger}  ||   UHCD wlr: {c.Red}{uhcwlr}")
-        
-        if uhckdr < 0.5:
-            print(f"{tSafe}    ||   UHC kdr: {uhckdr}")
-        elif uhckdr > 0.5 and uhckdr < 1.5:
-            print(f"{tRisky}   ||   UHC kdr: {c.Yellow}{uhckdr}")
-        elif uhckdr > 1.5:
-            print(f"{tDanger}  ||   UHC kdr: {c.Red}{uhckdr}")
-  
-        if wlr < 1.5 or (wlr == 0 and stat_duels_losses > 0):
-            print(f"{tSafe}    ||   Wlr: {wlr}")
-        elif wlr > 1.5 and wlr < 2.5:
-            print(f"{tRisky}   ||   Wlr: {c.Yellow}{wlr}")
-        elif wlr > 2.5 or (wlr == 0 and stat_duels_losses == 0):
-            print(f"{tDanger}  ||   Wlr: {c.Red}{wlr}")      
-        
-        if stat_duels_wins > 10 and stat_duels_wins < 10000:
-            print(f"{tSafe}    ||   Wins: {stat_duels_wins}")
-        elif (stat_duels_wins > 3 and stat_duels_wins < 10) or (stat_duels_wins > 10000 and stat_duels_wins < 20000):
-            print(f"{tRisky}   ||   Wins: {c.Yellow}{stat_duels_wins}")
-        elif (stat_duels_wins < 3 and (stat_duels_losses < 4 * stat_duels_wins)) or (stat_duels_wins > 20000):
-            print(f"{tDanger}  ||   Wins: {c.Red}{stat_duels_wins}")
-        else:
-            print(f"{tSafe}    ||   Wins: {stat_duels_wins}")       
-
-        if stat_duels_losses > 10:
-            print(f"{tSafe}    ||   Losses: {stat_duels_losses}")
-        elif stat_duels_losses > 3 and stat_duels_losses < 10:
-            print(f"{tRisky}   ||   Losses: {c.Yellow}{stat_duels_losses}")
-        elif stat_duels_losses < 3:
-            print(f"{tDanger}  ||   Losses: {c.Red}{stat_duels_losses}")
-        else:
-            print(f"{tSafe}    ||   Losses: {stat_duels_losses}")  
-        
-        if stat_duels_bws < 25 and stat_duels_bws != 0:
-            print(f"{tSafe}    ||   Bws: {stat_duels_bws}")
-        elif stat_duels_bws > 25 and stat_duels_bws < 50:
-            print(f"{tRisky}   ||   Bws: {c.Yellow}{stat_duels_bws}")
-        elif stat_duels_bws > 50 or stat_duels_bws == 0:
-            print(f"{tDanger}  ||   Bws: {c.Red}{stat_duels_bws}")
-
-        if stat_duels_cws < 5:
-            print(f"{tSafe}    ||   Cws: {stat_duels_cws}")
-        elif stat_duels_cws > 5 and stat_duels_cws < 15:
-            print(f"{tRisky}   ||   Cws: {c.Yellow}{stat_duels_cws}")
-        elif stat_duels_cws > 15:
-            print(f"{tDanger}  ||   Cws: {c.Red}{stat_duels_cws}")
-        else:
-            print(f"{tSafe}    ||   Cws: {stat_duels_cws}")
-        
-        if stat_melee_accuracy < 50 and stat_melee_accuracy != 0:
-            print(f"{tSafe}    ||   mAccuracy: {stat_melee_accuracy} %")
-        elif stat_melee_accuracy > 50 and stat_melee_accuracy < 70:
-            print(f"{tRisky}   ||   mAccuracy: {c.Yellow}{stat_melee_accuracy} %")
-        elif stat_melee_accuracy > 70 or stat_melee_accuracy == 0:
-            print(f"{tDanger}  ||   mAccuracy: {c.Red}{stat_melee_accuracy} %")
-        
-        if stat_combo_melee_accuracy < 75:
-            print(f"{tSafe}    ||   Combo mAcc: {stat_combo_melee_accuracy} %")
-        elif stat_combo_melee_accuracy > 75 and stat_combo_melee_accuracy < 100:
-            print(f"{tRisky}   ||   Combo mAcc: {c.Yellow}{stat_combo_melee_accuracy} %{c.Default}")
-        elif stat_combo_melee_accuracy > 100:
-            print(f"{tDanger}  ||   Combo mAcc: {c.Red}{stat_combo_melee_accuracy} %{c.Default}")
-        else:
-            print(f"{tSafe}    ||   Combo mAcc: {stat_combo_melee_accuracy} %")
-
-        # STATS END
-        print(f"{c.bgDefault}{c.White}------------------------------------")
-
-
-        # LISTS START
-        # Api off
-        if stat_duels_bws == 0 and stat_duels_bws == stat_duels_cws and stat_duels_wins > 5:
-            print(f"{c.LightYellow} >> {c.bgYellow}{c.Black} WS API OFF {c.bgDefault}{c.LightYellow} << {c.Default}")
-            api_on = True
-        else:
-            api_on = False
-
-        # Read blacklist
-        with open(blacklist, 'r') as bl:
-            for line in bl.readlines():
-                line = line.strip()
-                if line == uuid:
-                    if api_on == False: print('')
-                    print(f"{c.LightBlue} >> {c.bgBlue}{c.Black} BLACKLISTED! {c.bgDefault}{c.LightBlue} << {c.Default}")
-
-        # Read safelist
-        with open(safelist, 'r') as sl:
-            for line in sl.readlines():
-                line = line.strip()
-                if line == uuid:
-                    if api_on == False: print('')
-                    print(f"{c.LightGreen} >> {c.bgGreen}{c.Black} SAFELISTED! {c.bgDefault}{c.LightGreen} << {c.Default}")
-
-        # Read weirdlist
-        with open(weirdlist, 'r') as wl:
-            for line in wl.readlines():
-                line = line.strip()
-                if line == uuid:
-                    if api_on == False: print('')
-                    print(f"{c.LightYellow} >> {c.bgYellow}{c.Black} WEIRD! {c.bgDefault}{c.LightYellow} << {c.Default}")
-
-        # Read notes
-        with open(notes, 'r') as rnotes:
-            for nline in rnotes.readlines():
-                if uuid in nline:
-                    if devmode == 'y': print(nline)
-                    start = nline.index('Note: "')
-                    end = nline.index('"\n', start+1)
-                    note = nline[start+7:end]
-                    print(f' {c.White}>>{c.allDefault} {c.bgLightBlue}{c.Black} Note: {note} {c.allDefault} {c.White}<<{c.allDefault} ')
-
-        # Read record
-        rec_lost_uuids = []
-        rec_won_uuids = []
-        autobl_list = []
-        autosl_list = []
-        with open(record, 'r') as rrec:
-            for line in rrec.readlines():
-                if 'Lost to' in line:
-                    rec_lost_uuid = line.replace('Lost to ', '')
-                    rec_lost_uuids.append(rec_lost_uuid)
-
-                elif 'Won against' in line:
-                    rec_won_uuid = line.replace('Won against ', '')
-                    rec_won_uuids.append(rec_won_uuid)
-
-            for uuid_ in rec_lost_uuids:
-                uuidcount = countOf(rec_lost_uuids, uuid_)
-                if uuidcount > autoblacklist_loss_count-1:
-                    autobl_list.append(uuid_)
-
-            for uuid_ in rec_won_uuids:
-                uuidcount = countOf(rec_won_uuids, uuid_)
-                if uuidcount > autosafelist_win_count-1:
-                    autosl_list.append(uuid_)
-
-            for _uuid in autobl_list:
-                uuidcount = countOf(autobl_list, _uuid)
-                if uuidcount > 1:
-                    uuidindex = autobl_list.index(_uuid)
-                    autobl_list.pop(uuidindex)
+            try: stat_bw_deaths = data["player"]["stats"]["Bedwars"]["deaths_bedwars"]
+            except KeyError: stat_bw_deaths = 0
             
-            for _uuid in autosl_list:
-                uuidcount = countOf(autosl_list, _uuid)
-                if uuidcount > 1:
-                    uuidindex = autosl_list.index(_uuid)
-                    autosl_list.pop(uuidindex)
-        if devmode == 'y':
-            print(f'Auto blacklist list: {autobl_list}')
-            print(f'Auto safelist list: {autosl_list}')
+            stat_bblr = round((stat_bedwars_beds_broken/max(stat_bedwars_beds_lost,1)),cfg.rounding_precision)
+            stat_fkdr = round((stat_bedwars_final_kills/max(stat_bedwars_final_deaths,1)), cfg.rounding_precision)
+            stat_bw_kdr = round(stat_bw_kills/max(stat_bw_deaths,1), cfg.rounding_precision)
+            stat_bw_fksperstar = round(stat_bedwars_final_kills/max(stat_bedwars_star,1), cfg.rounding_precision)
 
-        # Autolist
-        if autoblacklist_loss_count > 0:
-            with open(blacklist, 'a') as abl:
-                for autobl_uuid in autobl_list:
-                    abl.write(f'{autobl_uuid}\n')
-            dd(blacklist)
 
-        if autosafelist_win_count > 0:
-            with open(safelist, 'a') as asl:
-                for autosl_uuid in autosl_list:
-                    asl.write(f'{autosl_uuid}\n')
-            dd(safelist)
+            # SKYWARS
+            try: stat_level_formatted = data["player"]["stats"]["SkyWars"]["levelFormatted"]
+            except KeyError: stat_level_formatted = "xx0x"
+
+            try: stat_skywars_kills = data["player"]["stats"]["SkyWars"]["kills"]
+            except KeyError: stat_skywars_kills = 0
+
+            try: stat_skywars_deaths = data["player"]["stats"]["SkyWars"]["deaths"]
+            except KeyError: stat_skywars_deaths = 0
+
+            stat_skywars_kdr = round((stat_skywars_kills/max(stat_skywars_deaths,1)), cfg.rounding_precision)
+            swstar = stat_level_formatted[2:-1]+" ☆"
+            intswstar = int(stat_level_formatted[2:-1])
+
+
+            # SUMO
+            try: stat_sumo_duel_wins = data["player"]["stats"]["Duels"]["sumo_duel_wins"]
+            except KeyError: stat_sumo_duel_wins = 0
+
+            try: stat_sumo_duel_losses = data["player"]["stats"]["Duels"]["sumo_duel_losses"]
+            except KeyError: stat_sumo_duel_losses = 0  
+
+            try: stat_sumo_bws = data["player"]["stats"]["Duels"]["best_sumo_winstreak"]
+            except KeyError: stat_sumo_bws = 0
+
+            try: stat_sumo_cws = data["player"]["stats"]["Duels"]["current_sumo_winstreak"]
+            except KeyError: stat_sumo_cws = 0
+
+            sumowlr = round((stat_sumo_duel_wins/max(stat_sumo_duel_losses, 1)), cfg.rounding_precision)
+
+
+            # UHC DUELS
+            try: stat_uhc_duel_wins = data["player"]["stats"]["Duels"]["uhc_duel_wins"]
+            except KeyError: stat_uhc_duel_wins = 0
+
+            try: stat_uhc_duel_losses = data["player"]["stats"]["Duels"]["uhc_duel_losses"]
+            except KeyError: stat_uhc_duel_losses = 0
+
+            uhcwlr = round((stat_uhc_duel_wins/max(stat_uhc_duel_losses, 1)), cfg.rounding_precision)
+
+
+            # REAL UHC
+            try: stat_UHC_kills = data["player"]["stats"]["UHC"]["kills_solo"] + data["player"]["stats"]["UHC"]["kills"]
+            except KeyError: stat_UHC_kills = 0
+
+            try: stat_UHC_deaths = data["player"]["stats"]["UHC"]["deaths_solo"] + data["player"]["stats"]["UHC"]["deaths"]
+            except KeyError: stat_UHC_deaths = 0
+
+            uhckdr = round((stat_UHC_kills/max(stat_UHC_deaths, 1)), cfg.rounding_precision)
+
+
+            # GENERAL DUELS
+            try: stat_duels_wins = data["player"]["stats"]["Duels"]["wins"]
+            except KeyError: stat_duels_wins = 0
+
+            try: stat_duels_losses = data["player"]["stats"]["Duels"]["losses"]
+            except KeyError: stat_duels_losses = 0
+
+            try: stat_duels_bws = data["player"]["stats"]["Duels"]["best_overall_winstreak"]
+            except KeyError: stat_duels_bws = 0
+
+            try: stat_duels_cws = data["player"]["stats"]["Duels"]["current_winstreak"]
+            except KeyError: stat_duels_cws = 0
+
+            wlr = round((stat_duels_wins/max(stat_duels_losses, 1)), cfg.rounding_precision)
+
+            # MELEE
+            try: stat_duels_melee_hits = data["player"]["stats"]["Duels"]["melee_hits"]
+            except KeyError: stat_duels_melee_hits = 0
+
+            try: stat_duels_melee_swings = data["player"]["stats"]["Duels"]["melee_swings"]
+            except KeyError: stat_duels_melee_swings = 0
+
+            try: stat_duels_combo_melee_hits = data["player"]["stats"]["Duels"]["combo_duel_melee_hits"]
+            except KeyError: stat_duels_combo_melee_hits = 0
+
+            try: stat_duels_combo_melee_swings = data["player"]["stats"]["Duels"]["combo_duel_melee_swings"]
+            except KeyError: stat_duels_combo_melee_swings = 0
+
+            nocombomeleehits = stat_duels_melee_hits-stat_duels_combo_melee_hits
+            nocombomeleeswings = stat_duels_melee_swings-stat_duels_combo_melee_swings
+            stat_melee_accuracy = round((nocombomeleehits/max(nocombomeleeswings,1)*100), cfg.rounding_precision)
+            stat_combo_melee_accuracy = round((stat_duels_combo_melee_hits/max(stat_duels_combo_melee_swings,1)*100), cfg.rounding_precision)
+
+            # NWL
+            try: hypixelxp = data["player"]["networkExp"]
+            except KeyError: hypixelxp = 0
+
+            nwl = round(((math.sqrt((2 * hypixelxp) + 30625) / 50) - 2.5), cfg.rounding_precision)
+
+
+            # DISPLAY STATS
+            print(f"{c.bgDefault}{c.DarkGray}UUID:", uuid)
+            print(f"{c.bgDefault}{c.White}------------------------------------")
+            if cfg.nwl:
+                if 15 < nwl < 100:
+                    print(f"{tSafe}    ||   NWL: {nwl}") 
+                elif (100 < nwl < 200) or (5 < nwl < 15):
+                    print(f"{tRisky}   ||   NWL: {c.Yellow}{nwl}")
+                elif nwl < 5:
+                    print(f"{tDanger}  ||   NWL: {c.Red}{nwl}")
+                else:
+                    print(f"{tDanger}  ||   NWL: {c.Red}{nwl}")
+
+            if cfg.sw_star:
+                if 0 < intswstar < 10:
+                    print(f"{tSafe}    ||   SW star: {swstar}")
+                elif intswstar < 15 or intswstar == 0:
+                    print(f"{tRisky}   ||   SW star: {c.Yellow}{swstar}")
+                elif intswstar > 15:
+                    print(f"{tDanger}  ||   SW star: {c.Red}{swstar}")
+
+            if cfg.sw_kdr:
+                if stat_skywars_kdr < 1:
+                    print(f"{tSafe}    ||   SW kdr: {stat_skywars_kdr}")
+                elif stat_skywars_kdr > 1 and stat_skywars_kdr < 2:
+                    print(f"{tRisky}   ||   SW kdr: {c.Yellow}{stat_skywars_kdr}")
+                elif stat_skywars_kdr > 2:
+                    print(f"{tDanger}  ||   SW kdr: {c.Red}{stat_skywars_kdr}")
+
+            if cfg.bw_star:
+                if stat_bedwars_star < 200 and stat_bedwars_star != 0:
+                    print(f"{tSafe}    ||   BW star: {stat_bedwars_star} ☆")
+                elif stat_bedwars_star > 200 and stat_bedwars_star < 350:
+                    print(f"{tRisky}   ||   BW star: {c.Yellow}{stat_bedwars_star} ☆")
+                elif stat_bedwars_star > 350 or stat_bedwars_star == 0:
+                    print(f"{tDanger}  ||   BW star: {c.Red}{stat_bedwars_star} ☆")
+
+            if cfg.bw_fkdr:
+                if stat_fkdr < 2 and stat_fkdr != 0:
+                    print(f"{tSafe}    ||   FKDR: {stat_fkdr}")
+                elif stat_fkdr > 2 and stat_fkdr < 3.5:
+                    print(f"{tRisky}   ||   FKDR: {c.Yellow}{stat_fkdr}")
+                elif stat_fkdr > 3.5:
+                    print(f"{tDanger}  ||   FKDR: {c.Red}{stat_fkdr}")
+                else:
+                    print(f"{tRisky}   ||   FKDR: {c.Yellow}{stat_fkdr}")
+
+            if cfg.bw_bblr:
+                if stat_bblr < 1.4 and stat_bblr != 0:
+                    print(f"{tSafe}    ||   BBLR: {stat_bblr}")
+                elif stat_bblr > 1.4 and stat_bblr < 2.8:
+                    print(f"{tRisky}   ||   BBLR: {c.Yellow}{stat_bblr}")
+                elif stat_bblr > 2.8:
+                    print(f"{tDanger}  ||   BBLR: {c.Red}{stat_bblr}")
+                else:
+                    print(f"{tRisky}   ||   BBLR: {c.Yellow}{stat_bblr}")    
+            
+            if cfg.bw_kdr:
+                if stat_bw_kdr < 1.2 and stat_bw_kdr != 0:
+                    print(f"{tSafe}    ||   BW kdr: {stat_bw_kdr}")
+                elif stat_bw_kdr > 1.2 and stat_bw_kdr < 2.4:
+                    print(f"{tRisky}   ||   BW kdr: {c.Yellow}{stat_bw_kdr}")
+                elif stat_bw_kdr > 2.4:
+                    print(f"{tDanger}  ||   BW kdr: {c.Red}{stat_bw_kdr}")
+                else:
+                    print(f"{tRisky}   ||   BW kdr: {c.Yellow}{stat_bw_kdr}")
+            if cfg.bw_fksperstar:
+                if stat_bw_fksperstar < 25:
+                    print(f"{tSafe}    ||   BW fks/star: {stat_bw_fksperstar}")
+                elif stat_bw_fksperstar > 25 and stat_bw_fksperstar < 50:
+                    print(f"{tRisky}   ||   BW fks/star: {c.Yellow}{stat_bw_fksperstar}")
+                elif stat_bw_fksperstar > 50:
+                    print(f"{tDanger}  ||   BW fks/star: {c.Red}{stat_bw_fksperstar}")
+
+            if cfg.sumo_wlr:    
+                if sumowlr < 1.1:
+                    print(f"{tSafe}    ||   Sumo wlr: {sumowlr}")
+                elif sumowlr > 1.1 and sumowlr < 1.6:
+                    print(f"{tRisky}   ||   Sumo wlr: {c.Yellow}{sumowlr}")
+                elif sumowlr > 1.6:
+                    print(f"{tDanger}  ||   Sumo wlr: {c.Red}{sumowlr}")   
+            
+            if cfg.sumo_bws:
+                if stat_sumo_bws < 10 and stat_sumo_bws != 0:
+                    print(f"{tSafe}    ||   Sumo bws: {stat_sumo_bws}")
+                elif stat_sumo_bws > 10 and stat_sumo_bws < 25:
+                    print(f"{tRisky}   ||   Sumo bws: {c.Yellow}{stat_sumo_bws}")
+                elif stat_sumo_bws > 25 or (stat_sumo_bws == 0 and stat_sumo_duel_wins > 0):
+                    print(f"{tDanger}  ||   Sumo bws: {c.Red}{stat_sumo_bws}")
+                else:
+                    print(f"{tRisky}   ||   Sumo bws: {c.Yellow}{stat_sumo_bws}")
+
+            if cfg.sumo_cws:
+                if stat_sumo_cws < 5:
+                    print(f"{tSafe}    ||   Sumo cws: {stat_sumo_cws}")
+                elif stat_sumo_cws > 5 and stat_sumo_cws < 10:
+                    print(f"{tRisky}   ||   Sumo cws: {c.Yellow}{stat_sumo_cws}")
+                elif stat_sumo_cws > 10:
+                    print(f"{tDanger}  ||   Sumo cws: {c.Red}{stat_sumo_cws}")
+                else:
+                    print(f"{tSafe}    ||   Sumo cws: {stat_sumo_cws}")
+            
+            if cfg.uhc_wlr:
+                if uhcwlr < 1:
+                    print(f"{tSafe}    ||   UHCD wlr: {uhcwlr}")
+                elif uhcwlr > 1 and uhcwlr < 2.5:
+                    print(f"{tRisky}   ||   UHCD wlr: {c.Yellow}{uhcwlr}")
+                elif uhcwlr > 2.5:
+                    print(f"{tDanger}  ||   UHCD wlr: {c.Red}{uhcwlr}")
+            
+            if cfg.uhc_kdr:
+                if uhckdr < 0.5:
+                    print(f"{tSafe}    ||   UHC kdr: {uhckdr}")
+                elif uhckdr > 0.5 and uhckdr < 1.5:
+                    print(f"{tRisky}   ||   UHC kdr: {c.Yellow}{uhckdr}")
+                elif uhckdr > 1.5:
+                    print(f"{tDanger}  ||   UHC kdr: {c.Red}{uhckdr}")
+
+            if cfg.duels_wlr:
+                if wlr < 1.5 or (wlr == 0 and stat_duels_losses > 0):
+                    print(f"{tSafe}    ||   Wlr: {wlr}")
+                elif wlr > 1.5 and wlr < 2.5:
+                    print(f"{tRisky}   ||   Wlr: {c.Yellow}{wlr}")
+                elif wlr > 2.5 or (wlr == 0 and stat_duels_losses == 0):
+                    print(f"{tDanger}  ||   Wlr: {c.Red}{wlr}")      
+            
+            if cfg.duels_wins:
+                if stat_duels_wins > 10 and stat_duels_wins < 10000:
+                    print(f"{tSafe}    ||   Wins: {stat_duels_wins}")
+                elif (stat_duels_wins > 3 and stat_duels_wins < 10) or (stat_duels_wins > 10000 and stat_duels_wins < 20000):
+                    print(f"{tRisky}   ||   Wins: {c.Yellow}{stat_duels_wins}")
+                elif (stat_duels_wins < 3 and (stat_duels_losses < 4 * stat_duels_wins)) or (stat_duels_wins > 20000):
+                    print(f"{tDanger}  ||   Wins: {c.Red}{stat_duels_wins}")
+                else:
+                    print(f"{tSafe}    ||   Wins: {stat_duels_wins}")       
+
+            if cfg.duels_losses:
+                if stat_duels_losses > 10:
+                    print(f"{tSafe}    ||   Losses: {stat_duels_losses}")
+                elif stat_duels_losses > 3 and stat_duels_losses < 10:
+                    print(f"{tRisky}   ||   Losses: {c.Yellow}{stat_duels_losses}")
+                elif stat_duels_losses < 3:
+                    print(f"{tDanger}  ||   Losses: {c.Red}{stat_duels_losses}")
+                else:
+                    print(f"{tSafe}    ||   Losses: {stat_duels_losses}")  
+            
+            if cfg.duels_bws:
+                if stat_duels_bws < 25 and stat_duels_bws != 0:
+                    print(f"{tSafe}    ||   Bws: {stat_duels_bws}")
+                elif stat_duels_bws > 25 and stat_duels_bws < 50:
+                    print(f"{tRisky}   ||   Bws: {c.Yellow}{stat_duels_bws}")
+                elif stat_duels_bws > 50 or stat_duels_bws == 0:
+                    print(f"{tDanger}  ||   Bws: {c.Red}{stat_duels_bws}")
+ 
+            if cfg.duels_cws:
+                if stat_duels_cws < 5:
+                    print(f"{tSafe}    ||   Cws: {stat_duels_cws}")
+                elif stat_duels_cws > 5 and stat_duels_cws < 15:
+                    print(f"{tRisky}   ||   Cws: {c.Yellow}{stat_duels_cws}")
+                elif stat_duels_cws > 15:
+                    print(f"{tDanger}  ||   Cws: {c.Red}{stat_duels_cws}")
+                else:
+                    print(f"{tSafe}    ||   Cws: {stat_duels_cws}")
+            
+            if cfg.melee_accuracy:
+                if stat_melee_accuracy < 50 and stat_melee_accuracy != 0:
+                    print(f"{tSafe}    ||   mAccuracy: {stat_melee_accuracy} %")
+                elif stat_melee_accuracy > 50 and stat_melee_accuracy < 70:
+                    print(f"{tRisky}   ||   mAccuracy: {c.Yellow}{stat_melee_accuracy} %")
+                elif stat_melee_accuracy > 70 or stat_melee_accuracy == 0:
+                    print(f"{tDanger}  ||   mAccuracy: {c.Red}{stat_melee_accuracy} %")
+            
+            if cfg.combo_melee_accuracy:
+                if stat_combo_melee_accuracy < 75:
+                    print(f"{tSafe}    ||   Combo mAcc: {stat_combo_melee_accuracy} %")
+                elif stat_combo_melee_accuracy > 75 and stat_combo_melee_accuracy < 100:
+                    print(f"{tRisky}   ||   Combo mAcc: {c.Yellow}{stat_combo_melee_accuracy} %{c.Default}")
+                elif stat_combo_melee_accuracy > 100:
+                    print(f"{tDanger}  ||   Combo mAcc: {c.Red}{stat_combo_melee_accuracy} %{c.Default}")
+                else:
+                    print(f"{tSafe}    ||   Combo mAcc: {stat_combo_melee_accuracy} %")
+
+            # STATS END
+            print(f"{c.bgDefault}{c.White}------------------------------------")
+
+
+            # LISTS START
+            # Api off
+            if stat_duels_bws == 0 and stat_duels_bws == stat_duels_cws and stat_duels_wins > 5:
+                print(f"{c.LightYellow} >> {c.bgYellow}{c.Black} WS API OFF {c.bgDefault}{c.LightYellow} << {c.Default}")
+                api_on = True
+            else:
+                api_on = False
+
+            # Read blacklist
+            with open(cfg.blacklist, 'r') as bl:
+                for line in bl.readlines():
+                    line = line.strip()
+                    if line == uuid:
+                        if api_on == False: print('')
+                        print(f"{c.LightBlue} >> {c.bgBlue}{c.Black} BLACKLISTED! {c.bgDefault}{c.LightBlue} << {c.Default}")
+
+            # Read safelist
+            with open(cfg.safelist, 'r') as sl:
+                for line in sl.readlines():
+                    line = line.strip()
+                    if line == uuid:
+                        if api_on == False: print('')
+                        print(f"{c.LightGreen} >> {c.bgGreen}{c.Black} SAFELISTED! {c.bgDefault}{c.LightGreen} << {c.Default}")
+
+            # Read weirdlist
+            with open(cfg.weirdlist, 'r') as wl:
+                for line in wl.readlines():
+                    line = line.strip()
+                    if line == uuid:
+                        if api_on == False: print('')
+                        print(f"{c.LightYellow} >> {c.bgYellow}{c.Black} WEIRD! {c.bgDefault}{c.LightYellow} << {c.Default}")
+
+            # Read notes
+            with open(cfg.notes, 'r') as rnotes:
+                for nline in rnotes.readlines():
+                    if uuid in nline:
+                        if cfg.devmode: print(nline)
+                        start = nline.index('Note: "')
+                        end = nline.index('"\n', start+1)
+                        note = nline[start+7:end]
+                        print(f' {c.White}>>{c.allDefault} {c.bgLightBlue}{c.Black} Note: {note} {c.allDefault} {c.White}<<{c.allDefault} ')
+
+            # Read record
+            rec_lost_uuids = []
+            rec_won_uuids = []
+            autobl_list = []
+            autosl_list = []
+            with open(cfg.record, 'r') as rrec:
+                for line in rrec.readlines():
+                    if 'Lost to' in line:
+                        rec_lost_uuid = line.replace('Lost to ', '')
+                        rec_lost_uuids.append(rec_lost_uuid)
+
+                    elif 'Won against' in line:
+                        rec_won_uuid = line.replace('Won against ', '')
+                        rec_won_uuids.append(rec_won_uuid)
+
+                for uuid_ in rec_lost_uuids:
+                    uuidcount = countOf(rec_lost_uuids, uuid_)
+                    if uuidcount > cfg.autoblacklist_loss_count-1:
+                        autobl_list.append(uuid_)
+
+                for uuid_ in rec_won_uuids:
+                    uuidcount = countOf(rec_won_uuids, uuid_)
+                    if uuidcount > cfg.autosafelist_win_count-1:
+                        autosl_list.append(uuid_)
+
+                for _uuid in autobl_list:
+                    uuidcount = countOf(autobl_list, _uuid)
+                    if uuidcount > 1:
+                        uuidindex = autobl_list.index(_uuid)
+                        autobl_list.pop(uuidindex)
+                
+                for _uuid in autosl_list:
+                    uuidcount = countOf(autosl_list, _uuid)
+                    if uuidcount > 1:
+                        uuidindex = autosl_list.index(_uuid)
+                        autosl_list.pop(uuidindex)
+            if cfg.devmode:
+                print(f'Auto blacklist list: {autobl_list}')
+                print(f'Auto safelist list: {autosl_list}')
+
+            # Autolist
+            if cfg.autoblacklist_loss_count > 0:
+                with open(cfg.blacklist, 'a') as abl:
+                    for autobl_uuid in autobl_list:
+                        abl.write(f'{autobl_uuid}\n')
+                dd(cfg.blacklist)
+
+            if cfg.autosafelist_win_count > 0:
+                with open(cfg.safelist, 'a') as asl:
+                    for autosl_uuid in autosl_list:
+                        asl.write(f'{autosl_uuid}\n')
+                dd(cfg.safelist)
 
 
 readchat()
