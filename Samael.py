@@ -1,14 +1,10 @@
 # import libraries
-import math, time, os, sys, configparser, re
-
-try: import requests
-except ModuleNotFoundError:
-    os.sys('pip install requests')
-    print('Automatically installing missing dependency "requests".\nYou\'re gonna have to restart Samael.')
-    time.sleep(5); quit
+import math, time, os, sys, configparser, re, threading, requests
+from datetime import datetime
+from dhooks import Webhook
 
 # variables
-version = '5.0.3'
+version = '5.0.5'
 discord = "https://discord.gg/N3rVjjVEsv"
 script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
 config_file = f'{script_directory}/config.ini'
@@ -67,33 +63,41 @@ def readcfg():
         config_ini.read_file(file_object)
         global cfg
         class cfg:
+            # [apikey]
+            apikey = config_ini.get('apikey', 'apikey')
+
+            # [user]
+            samaeluser = config_ini.get('user', 'username')
+            nick = config_ini.get('user', 'nick')
+
+            # [devmode]
             devmode = config_ini.getboolean('devmode', 'dev')
 
+            # [paths]
             blacklist = config_ini.get('paths', 'blacklist')
             safelist = config_ini.get('paths', 'safelist')
             weirdlist = config_ini.get('paths', 'weirdlist')
             record = config_ini.get('paths',  'record')
             chat = config_ini.get('paths', 'chat')
             notes = config_ini.get('paths', 'notes')
-
-            apikey = config_ini.get('apikey', 'apikey')
-
+            hourly = config_ini.get('paths', 'hourly')
+            
+            # [safenicks]
             safenicks = config_ini.get('safenicks', 'safenicks')
+            safenicks = list(safenicks.split(', ')) # fixes formatting
 
+            # [options]
             rounding_precision = config_ini.getint('options', 'rounding_precision')
+            show_own_stats = config_ini.getboolean('options', 'show_own_stats')
 
-            samaeluser = config_ini.get('user', 'username')
-
-
+            # [autolist]
             autosafelist_win_count = config_ini.getint('autolist', 'autosafelist_win_count')
             autoblacklist_loss_count = config_ini.getint('autolist', 'autoblacklist_loss_count')
 
+            # [delimiter]
             delimiter_type = config_ini.getint('delimiter', 'delimiter_type')
 
-            # fix list formatting
-            safenicks = list(safenicks.split(', '))
-
-            # stat toggles
+            # [stat toggles]
             nwl = config_ini.getboolean('stat toggles', 'nwl')
             
             sw_star = config_ini.getboolean('stat toggles', 'sw_star')
@@ -121,6 +125,11 @@ def readcfg():
             melee_accuracy = config_ini.getboolean('stat toggles', 'melee_accuracy')
             combo_melee_accuracy = config_ini.getboolean('stat toggles', 'combo_melee_accuracy')
 
+            wh_enabled = config_ini.getboolean('webhook', 'wh_enabled')
+            if wh_enabled:
+                webhook = config_ini.get('webhook', 'webhook')
+                interval = config_ini.getint('webhook', 'interval')
+
 readcfg()
 cfg_toggles = ['nwl', 'sw_star', 'sw_kdr', 'bw_star', 'bw_fkdr', 'bw_bblr', 'bw_kdr', 'bw_fksperstar', 'sumo_wlr', 
                'sumo_bws', 'sumo_cws', 'uhc_wlr', 'uhc_kdr', 'duels_wlr', 'duels_wins', 'duels_losses', 'duels_bws', 'duels_cws', 'melee_accuracy',  'combo_melee_accuracy']
@@ -128,9 +137,10 @@ cfg_toggles = ['nwl', 'sw_star', 'sw_kdr', 'bw_star', 'bw_fkdr', 'bw_bblr', 'bw_
 # delimiter fix
 if cfg.delimiter_type == 0:
     delimiter = '▌'
-    print(delimiter)
 elif cfg.delimiter_type == 1:
     delimiter = '?'
+    
+if cfg.devmode: print(f'Delimiter type: {delimiter}')
 
 # main lists
 samael_lists = [cfg.blacklist, cfg.safelist, cfg.weirdlist]
@@ -171,10 +181,22 @@ def countOf(list, x):
             count += 1
     return count
 
-def filter_safelist_and_blacklist(safelist, blacklist):
-    common_elements = set(safelist) & set(blacklist)
-    new_safelist = [item for item in safelist if item not in common_elements]
-    return new_safelist, blacklist
+def filter_lists():
+    with open(cfg.safelist, 'r') as slist:
+        s_lines = slist.readlines()
+
+    for s_line in s_lines:
+        s_line = s_line.strip()
+        b_count = count_specific_strings_in_file(cfg.blacklist, s_line)
+        w_count = count_specific_strings_in_file(cfg.weirdlist, s_line)
+
+        if b_count > 0 or w_count > 0:
+            print(f"> Filtering {s_line}")
+            with open(f"{cfg.safelist}", "r") as findsl:
+                data = findsl.read()
+                data = data.replace(s_line, '\n')
+            with open(f"{cfg.safelist}", "w") as findsl:
+                findsl.write(data)
 
 def remove_element(lst, element_to_remove):
     return [item for item in lst if item != element_to_remove]
@@ -229,6 +251,44 @@ def omgnick():
     print(f"{c.LightMagenta} >> {c.bgMagenta}{c.Black} NICK OMG WTF DODGE NICK DODGE!! {c.bgDefault}{c.LightMagenta} <<")
     print(f"{c.bgDefault}{c.LightMagenta}      -----------------------------    {c.White}")
 
+# Hourly dependencies
+if cfg.wh_enabled:
+
+    uuid = igntouuid(cfg.samaeluser)
+    url = f"https://api.hypixel.net/player?key={cfg.apikey}&uuid={uuid}"
+    data = getInfo(url)
+    webhook = Webhook(cfg.webhook)
+
+    def count_specific_strings_in_file(file_path, target_string):
+        with open(file_path, 'r') as file:
+            content = file.read()
+            # Split the content into words based on whitespace
+            words = content.split()
+            # Count the number of occurrences of the target string
+            num_occurrences = words.count(target_string)
+            return num_occurrences
+
+    def hourlystats():
+        starttime = datetime.now()
+        time.sleep(cfg.interval)
+
+        hourlywins = count_specific_strings_in_file(cfg.hourly, 'W')
+        hourlylosses = count_specific_strings_in_file(cfg.hourly, 'L')
+
+        endtime = datetime.now()
+
+        hourlywlr = round(hourlywins/max(hourlylosses,1), cfg.rounding_precision)
+
+        hourlywlr = hourlywins/round(max(hourlylosses,1), cfg.rounding_precision)
+        webhookdata = f"# Stats for {cfg.samaeluser} over the last {cfg.interval} seconds\nStart: {starttime}\nEnd: {endtime}\n-----\n- Hourly wins: {hourlywins}\n- Hourly losses: {hourlylosses}\n- Hourly wlr: {hourlywlr}"
+
+        print(webhookdata)
+        webhook.send(webhookdata)
+
+        with open(cfg.hourly, 'w') as hourlyreset:
+            hourlyreset.write('')
+
+
 # splash screen
 print("\n")
 print(f"{c.Red}███████╗ █████╗ ███╗   ███╗ █████╗ ███████╗██╗     ")
@@ -251,6 +311,21 @@ print("\n\n")
 # clears record on start
 with open(cfg.record, 'w') as clrrec:
     clrrec.write('')
+
+if cfg.wh_enabled:
+    # Hourly stats
+    def hourly_function():
+        while True:
+            hourlystats()
+            
+
+    # Create a thread for the hourly function
+    hourly_thread = threading.Thread(target=hourly_function)
+    # Set the thread as a daemon so it will terminate when the main program terminates
+    hourly_thread.daemon = True
+    # Start the thread
+    hourly_thread.start()
+
 
 # read chat
 def readchat():
@@ -287,7 +362,7 @@ def readchat():
                         omgnick()
 
             # /sc name isolation
-            if f"[Client thread/INFO]: [CHAT] {delimiter}" in line and f"[Client thread/INFO]: [CHAT] {delimiter} W/L: " not in line:
+            elif f"[Client thread/INFO]: [CHAT] {delimiter}" in line and f"[Client thread/INFO]: [CHAT] {delimiter} W/L: " not in line and "Lvl:" in line:
 
                 isolation1start = line.index('[CHAT]')
                 isolation1end = line.index('Lvl:')
@@ -309,7 +384,12 @@ def readchat():
                         isolationrank = re.sub('§.', '', isolationrank)
                     if cfg.devmode: print("Isolated rank:", isolationrank)
 
-                    antisniper(isolationname, isolationrank)
+                    if cfg.show_own_stats:
+                        antisniper(isolationname, isolationrank)
+                    else:
+                        if isolationname != cfg.samaeluser:
+                            antisniper(isolationname, isolationrank)
+
                 else:
                     isolationnonstart = isolation1.index(delimiter)
                     isolationnonend = isolation1.index('$')
@@ -317,7 +397,11 @@ def readchat():
                     isolationnon = isolationnon.strip()
                     if cfg.devmode: print("Isolated non:", isolationnon)
 
-                    antisniper(isolationnon, '[NON]')
+                    if cfg.show_own_stats:
+                        antisniper(isolationnon, '[NON]')
+                    else:
+                        if isolationnon != cfg.samaeluser:
+                            antisniper(isolationnon, '[NON]')
 
 
             # Write record
@@ -337,15 +421,18 @@ def readchat():
                 
                 print(f"\n [i] You won against {won_opponent}")
                 won_uuid = igntouuid(won_opponent)
-                print(f"\n [-] UUID: {won_uuid}")
+                if cfg.devmode: print(f"\nUUID: {won_uuid}")
 
                 with open(cfg.record, 'a') as wrec:
                     wrec.write(f"Won against {won_uuid}\n")
-            
+
+                with open(cfg.hourly, 'a') as whr:
+                    whr.write(f"{datetime.now()} >> W\n")            
+
             elif "[Client thread/INFO]: [CHAT]   " in line and "WINNER!\n" in line:
-                isol1start = line.index(cfg.samaeluser)
+                isol1start = line.index(cfg.nick)
                 isol1end = line.index('WINNER!')
-                isol1 = (line[isol1start+len(cfg.samaeluser):isol1end]).strip()
+                isol1 = (line[isol1start+len(cfg.nick):isol1end]).strip()
 
                 if '[' and ']' in isol1:
                     isol1 = f'{isol1}$'
@@ -358,11 +445,14 @@ def readchat():
 
                 print(f"\n [i] You lost to {lost_opponent}")
                 lost_uuid = igntouuid(lost_opponent)
-                print(f"\n [-] UUID: {lost_uuid}")
+                if cfg.devmode: print(f"\nUUID: {lost_uuid}")
 
                 with open(cfg.record, 'a') as wrec:
                     wrec.write(f"Lost to {lost_uuid}\n")
             
+                with open(cfg.hourly, 'a') as whr:
+                    whr.write(f"{datetime.now()} >> L\n")        
+
 
             # commands
             addcommands = ['b', 's', 'w']
@@ -465,16 +555,10 @@ def readchat():
                 print('Fixed list formatting!')
 
             if "[Client thread/INFO]: [CHAT] -filter" in line:
-                with open(cfg.safelist, 'r') as sl:
-                    slist = sl.readlines()
-                with open(cfg.blacklist, 'r') as bl:
-                    blist = bl.readlines()
-                
-                new_safelist, new_blacklist = filter_safelist_and_blacklist(slist, blist)
-                
-                write_list_to_txt(new_safelist, cfg.safelist)
-                write_list_to_txt(new_blacklist, cfg.blacklist)
+
+                filter_lists()
                 print('Filtered lists')
+
                 for samael_list in samael_lists:
                     dd(samael_list)
                 print('Fixed list formatting!')
@@ -567,6 +651,32 @@ def readchat():
 
                 else:
                     print(f' [c] Invalid argument: {arg}')
+
+            if "[Client thread/INFO]: [CHAT] -nick " in line:
+                argstart = line.index('-nick')
+                argend = line.index('\n', argstart+1)
+                arg = (line[argstart+6:argend]).strip()
+
+                config_ini.read(config_file)
+                config_ini.set('user', 'nick', arg)
+
+                with open(config_file, 'w') as file_object:
+                    config_ini.write(file_object)
+                readcfg()
+                print(f' [c] Changed nick to {arg}')
+                if cfg.devmode: print(f'cfg.nick: {cfg.nick}')
+
+            if "[Client thread/INFO]: [CHAT] -show_own_stats" in line:
+                config_ini.read(config_file)
+                if cfg.show_own_stats:
+                    config_ini.set('options', 'show_own_stats', 'False')
+                else:
+                    config_ini.set('options', 'show_own_stats', 'True')
+
+                with open(config_file, 'w') as file_object:
+                    config_ini.write(file_object)
+                readcfg()
+                print(f'[c] Set show_own_stats to {cfg.show_own_stats}')
 
 
 # antisniper
@@ -980,3 +1090,4 @@ def antisniper(name, rank):
 
 
 readchat()
+
