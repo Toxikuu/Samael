@@ -1,14 +1,14 @@
 # import libraries
 import math, time, os, sys, configparser, re, threading, requests
-from datetime import datetime
-from dhooks import Webhook
+from datetime import datetime; from dhooks import Webhook
 
 # variables
-version = '5.0.5'
+version = '5.0.6'
 discord = "https://discord.gg/N3rVjjVEsv"
 script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
 config_file = f'{script_directory}/config.ini'
 config_ini = configparser.ConfigParser()
+# if i ever decide to implement it, user can be automatically gotten with getpass.getuser() using import getpass
 
 # colors
 class c:
@@ -133,6 +133,11 @@ def readcfg():
 readcfg()
 cfg_toggles = ['nwl', 'sw_star', 'sw_kdr', 'bw_star', 'bw_fkdr', 'bw_bblr', 'bw_kdr', 'bw_fksperstar', 'sumo_wlr', 
                'sumo_bws', 'sumo_cws', 'uhc_wlr', 'uhc_kdr', 'duels_wlr', 'duels_wins', 'duels_losses', 'duels_bws', 'duels_cws', 'melee_accuracy',  'combo_melee_accuracy']
+
+# clear hourly
+if cfg.wh_enabled:
+    with open(cfg.hourly, 'w') as clrhr:
+        clrhr.write('')
 
 # delimiter fix
 if cfg.delimiter_type == 0:
@@ -1074,6 +1079,14 @@ def antisniper(name, rank):
             if cfg.devmode:
                 print(f'Auto blacklist list: {autobl_list}')
                 print(f'Auto safelist list: {autosl_list}')
+
+            if len(autobl_list) > 0:
+                autobl_list.clear()
+                if cfg.devmode: print(f'Cleared autobl_list')
+            
+            if len(autosl_list) > 0:
+                autosl_list.clear()
+                if cfg.devmode: print(f'Cleared autosl_list')
 
             # Autolist
             if cfg.autoblacklist_loss_count > 0:
