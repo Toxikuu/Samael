@@ -57,6 +57,8 @@ tDanger = f'{c.White}{c.bgRed}DANGER{c.allDefault}'
 tRisky = f'{c.Yellow}Risky{c.allDefault}'
 tSafe = f'{c.White}Safe{c.allDefault}'
 
+prevOpponents = []
+
 # config
 def readcfg():
     with open(config_file, 'r') as file_object:
@@ -168,7 +170,7 @@ def igntouuid(ign):
         uuid = pdb["data"]["player"]["raw_id"]
         return uuid
     except:
-        print(f'Failed to access uuid for {ign}!')
+        print(f'\n{c.LightRed} >> {c.bgRed}{c.Black} Failed to access uuid for {ign}! {c.allDefault}{c.LightRed} <<{c.allDefault}')
 
 def follow(thefile):
     thefile.seek(0,2)
@@ -408,7 +410,6 @@ def readchat():
                         if isolationnon != cfg.samaeluser:
                             antisniper(isolationnon, '[NON]')
 
-
             # Write record
             if "[Client thread/INFO]: [CHAT]   " in line and "WINNER!  " in line:
                 iso1start = line.index('WINNER!')
@@ -456,8 +457,31 @@ def readchat():
                     wrec.write(f"Lost to {lost_uuid}\n")
             
                 with open(cfg.hourly, 'a') as whr:
-                    whr.write(f"{datetime.now()} >> L\n")        
+                    whr.write(f"{datetime.now()} >> L\n")
 
+            if "[Client thread/INFO]: [CHAT]   " in line and "Opponent:" in line:
+                iso1s = line.index("Opponent:")
+                iso1e = line.index('\n')
+                iso1_ = f"{(line[iso1s+10:iso1e]).strip()}$"
+                if cfg.devmode: print(f"Previous opponent iso1: {iso1_}")
+
+                if '[' and ']' in iso1_:
+                    iso2s = iso1_.index(']')
+                    iso2e = iso1_.index('$')
+                    prevOpponent = (iso1_[iso2s+2:iso2e]).strip()
+                else:
+                    prevOpponent = iso1_.strip(' $')
+
+                if cfg.devmode: print(f"Previous opponent iso2: {prevOpponent}")
+
+                # previous opponents list
+                prevOpponents.append(prevOpponent)
+
+                if len(prevOpponents) > 2:
+                    del prevOpponents[0]
+
+                if len(prevOpponents) > 1:
+                    _2prevOpponent = prevOpponents[-2]                    
 
             # commands
             addcommands = ['b', 's', 'w']
@@ -467,33 +491,43 @@ def readchat():
                     end = line.index('\n', start+1)
                     name = line[start+3:end]
 
-                    print('> Fetching uuid for', name)
-                    try:
-                        uuid = igntouuid(name)
+                    def addtolist(_name):
+                        print(f'> Fetching uuid for {_name}')
+                        try:
+                            uuid = igntouuid(_name)
 
-                        if addcommand == 'b':
-                            print(f"> Blacklisting", uuid)
-                            with open(f"{cfg.blacklist}", "a") as bl:
-                                bl.write(f"\n{uuid}\n")
-                            print(f"> Added {name} to blacklist\n")
-
-
-                        elif addcommand == 's':
-                            print(f"> Safelisting", uuid)
-                            with open(f"{cfg.safelist}", "a") as sl:
-                                sl.write(f"\n{uuid}\n")
-                            print(f"> Added {name} to safelist\n")
+                            if addcommand == 'b':
+                                print(f"> Blacklisting", uuid)
+                                with open(f"{cfg.blacklist}", "a") as bl:
+                                    bl.write(f"\n{uuid}\n")
+                                print(f"> Added {_name} to blacklist\n")
 
 
-                        elif addcommand == 'w':
-                            print(f"> Weirdlisting", uuid)
-                            with open(f"{cfg.weirdlist}", "a") as wl:
-                                wl.write(f"\n{uuid}\n")
-                            print(f"> Added {name} to weirdlist\n")
+                            elif addcommand == 's':
+                                print(f"> Safelisting", uuid)
+                                with open(f"{cfg.safelist}", "a") as sl:
+                                    sl.write(f"\n{uuid}\n")
+                                print(f"> Added {_name} to safelist\n")
 
 
-                    except KeyError:
-                        print("Error: invalid ign")
+                            elif addcommand == 'w':
+                                print(f"> Weirdlisting", uuid)
+                                with open(f"{cfg.weirdlist}", "a") as wl:
+                                    wl.write(f"\n{uuid}\n")
+                                print(f"> Added {_name} to weirdlist\n")
+
+
+                        except KeyError:
+                            print("Error: invalid ign")
+
+                    if name == '^':
+                        print("> Listing previous opponent")
+                        addtolist(prevOpponent)
+                    elif name == '^^':
+                        print("> Listing previous previous opponent")
+                        addtolist(_2prevOpponent)
+                    else:
+                        addtolist(name)
 
 
             removecommands = ['rb', 'rs', 'rw']
@@ -503,36 +537,49 @@ def readchat():
                     end = line.index('\n', start+1)
                     name = line[start+4:end]
 
-                    print("> Fetching uuid for", name)
-                    try:
-                        uuid = igntouuid(name)
+                    def removefromlist(_name):
+                        print("> Fetching uuid for", _name)
+                        try:
+                            uuid = igntouuid(_name)
 
-                        if removecommand == 'rb':
-                            print(f"> Removing {uuid} from blacklist")
-                            with open(f"{cfg.blacklist}", "r") as findbl:
-                                data = findbl.read()
-                                data = data.replace(uuid, '\n')
-                            with open(f"{cfg.safelist}", "w") as findbl:
-                                findbl.write(data)
+                            if removecommand == 'rb':
+                                print(f"> Removing {uuid} from blacklist")
+                                with open(f"{cfg.blacklist}", "r") as findbl:
+                                    data = findbl.read()
+                                    data = data.replace(uuid, '\n')
+                                with open(f"{cfg.safelist}", "w") as findbl:
+                                    findbl.write(data)
+                                print(f"> Removed {_name} from blacklist\n")
 
-                        elif removecommand == 'rs':
-                            print(f"> Removing {uuid} from safelist")
-                            with open(f"{cfg.safelist}", "r") as findsl:
-                                data = findsl.read()
-                                data = data.replace(uuid, '\n')
-                            with open(f"{cfg.safelist}", "w") as findsl:
-                                findsl.write(data)
+                            elif removecommand == 'rs':
+                                print(f"> Removing {uuid} from safelist")
+                                with open(f"{cfg.safelist}", "r") as findsl:
+                                    data = findsl.read()
+                                    data = data.replace(uuid, '\n')
+                                with open(f"{cfg.safelist}", "w") as findsl:
+                                    findsl.write(data)
+                                print(f"> Removed {_name} from safelist\n")
 
-                        elif removecommand == 'rw':
-                            print(f"> Removing {uuid} from weirdlist")
-                            with open(f"{cfg.weirdlist}", "r") as findwl:
-                                data = findwl.read()
-                                data = data.replace(uuid, '\n')
-                            with open(f"{cfg.weirdlist}", "w") as findwl:
-                                findwl.write(data)
+                            elif removecommand == 'rw':
+                                print(f"> Removing {uuid} from weirdlist")
+                                with open(f"{cfg.weirdlist}", "r") as findwl:
+                                    data = findwl.read()
+                                    data = data.replace(uuid, '\n')
+                                with open(f"{cfg.weirdlist}", "w") as findwl:
+                                    findwl.write(data)
+                                print(f"> Removed {_name} from weirdlist\n")
 
-                    except KeyError:
-                        print("Error: invalid ign")
+                        except KeyError:
+                            print("Error: invalid ign")
+
+                    if name == '^':
+                        print("> Unlisting previous opponent")
+                        removefromlist(prevOpponent)
+                    elif name == '^^':
+                        print("> Unlisting previous previous opponent")
+                        removefromlist(_2prevOpponent)
+                    else:
+                        removefromlist(name)
 
             if "[Client thread/INFO]: [CHAT] -api" in line:
                 start = line.index('-api')
@@ -582,6 +629,12 @@ def readchat():
                 notestart = line.index(' "')
                 noteend = line.index('\n', notestart+1)
                 note = line[notestart+2:noteend]
+
+                if name == '^':
+                    if cfg.devmode: print('NOTE ^ FLAG')
+                    name = prevOpponent
+                elif name == '^^':
+                    name = _2prevOpponent
                 print(f' [n] Note: {note}')
                 print(f" [n] Grabbing {name}'s uuid")
                 try:
