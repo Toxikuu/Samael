@@ -11,29 +11,16 @@
 
 # Prerequisites
     To use Samael, you need to have Python installed.
-    It's also recommended that you add Python to path.
-    I also highly recommend Windows Terminal to launch it as it makes your life much easier (it fixes weird color and formatting issues).
-    Additionally, you need to have the requests python module installed.
-    This can be installed by running "pip install requests" in your terminal.
+    It's also highly recommended that you add Python to path.
+    I also recommend Windows Terminal to launch it as it makes your life much easier (it fixes weird color and formatting issues).
+    To install the dependencies, run dependencies.bat (this will pip install requests and dhooks)
 
 # Setup
-    Create a folder called Samael, and within that another folder called Lists.
-    Place your samael.py and config.ini files into the Samael folder.
-    Create 5 new files in the Lists folder:
-    Safelist.txt, blacklist.txt, weirdlist.txt, record.txt, and notes.txt.
+    Extract Samael.zip to your desktop (or wherever you want).
 
 # Config
-    Open config.ini.
-    Add in your hypixel apikey and username.
-    You can disable devmode if you don't want debug information.
-    Under paths, set the paths of your lists to their respective paths (should be in the Lists folder from the setup).
-    For chat, locate the latest.log for your client (for lunar, this should be C:/Users/User/.lunarclient/offline/multiver/logs/latest.log).
-    The location of latest.log varies depending on your minecraft client.
-    If you don't want to be notified of specific nicks, you may add their nicks to safenicks.
-    Rounding_precision indicates how many digits after the decimal will be displayed.
-    Show_splash_screen toggles the Samael splashcreen on launch; set show_splash_screen = n to toggle it off. 
-    Delimiter type changes the delimiter Samael uses to parse names from latest.log.
-    If Samael isn't showing stats, try setting delimiter_type = 1 instead of 0.
+    You'll have to edit the config.ini.
+    See the comments within the file for more information.
     
 # Lists
     Blacklist stores UUIDs of players Samael shows as blacklisted.
@@ -42,14 +29,18 @@
     Record keeps track of who you win and lose to.
     This is used to automatically safelist or blacklist players.
     Notes stores the notes you make.
+    Hourly stores session stats if you decide to use the webhook.
  
 # Launching
-    Once you've set up and configured samael, run it with:
+    Once you've set up and configured Samael, run it with:
     python <your samael.py path>
     Or create a launch.bat with the python run command.
+    Or double click samael.py
 
 # Commands
     Samael commands use the following format (typed in Minecraft chat): /fakechat -command argument.
+    Additionally, ^ or ^^ may be used in place of an ign to target the previous or previous previous opponent.
+    Ex. /fakechat -note ^ "might be cheating ~ will make that note of the last opponent you fought.
     Samael adds the following commands:
     /fakechat -s ign ~ safelists a player ~ ex. /fakechat -s toxikuu
     /fakechat -b ign ~ blacklists a player ~ ex. /fakechat -b toxikuu
@@ -60,10 +51,15 @@
     /fakechat -rw ign ~ removes a player from weirdlist ~ ex. /fakechat -rw toxikuu
     /fakechat -api apikey ~ replaces the apikey in the config with the apikey argument ~ ex. /fakechat -api 681e5ab5-e6b6-4d13-9550-4e6e26af1cc9
     /fakechat -refresh ~ reloads the config
+    /fakechat -reload ~ alias of -refresh
     /fakechat -dd ~ fixes list formatting (removes duplicate entries and white space)
-    /fakechat -clr ~ wipes record
     /fakechat -filter ~ filters safelist and blacklist entries; ie if a player is both in the safelist and blacklist, they are removed from the safelist. Also runs -dd afterwards, fixing list formatting after removing entries.
     /fakechat -note ign "note ~ allows you to make custom notes for a specific player (open the quote before your note, but do not close it) ~ ex. /fakechat -note toxikuu "sedge alt
+    /fakechat -nick nick ~ adds your nick to the config ~ ex. /fakechat -nick Maria687
+    /fakechat -delimiter 0 ~ changes delimiter type to 0; other valid argument is 1
+    /fakechat -dev ~ toggles devmode
+    /fakechat -toggle stat ~ toggles a Samael stat (view stat toggles in the config for a list of valid arguments) (allon and alloff are also arguments)
+    /fakechat -show_own_stats ~ toggles show_own_stats
     
 # Additional Resources
     Discord: https://discord.gg/N3rVjjVEsv
