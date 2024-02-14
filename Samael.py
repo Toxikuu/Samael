@@ -3,7 +3,7 @@ import math, time, os, sys, configparser, re, threading, requests
 from datetime import datetime; from dhooks import Webhook
 
 # variables
-version = '5.0.6'
+version = '5.0.8'
 discord = "https://discord.gg/N3rVjjVEsv"
 script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
 config_file = f'{script_directory}/config.ini'
@@ -160,6 +160,35 @@ if cfg.devmode:
     print(config_data_dev)
 
 # some functions
+def read_ids_from_file(filename):
+    ids = set()
+    with open(filename, 'r') as file:
+        for line in file:
+            ids.add(line.strip())
+    return ids
+
+def remove_blacklisted_ids(safelist, blacklist, weirdlist):
+    safelist_ids = read_ids_from_file(safelist)
+    blacklist_ids = read_ids_from_file(blacklist)
+    weirdlist_ids = read_ids_from_file(weirdlist)
+    blacklist_ids.update(weirdlist_ids)
+    
+    removed_ids = safelist_ids.intersection(blacklist_ids)
+    
+    num_removed = 0
+    if removed_ids:
+        for id_ in removed_ids:
+            num_removed += 1
+        safelist_ids -= removed_ids
+    
+        with open(safelist, 'w') as file:
+            for id_ in safelist_ids:
+                file.write(id_ + '\n')
+        print(f'> Removed {num_removed} blacklisted/weirdlisted UUIDs from safelist.')
+
+    else:
+        print("> No UUIDs to remove from the safelist.")
+
 def getInfo(call):
     r = requests.get(call)
     return r.json()
@@ -189,21 +218,8 @@ def countOf(list, x):
     return count
 
 def filter_lists():
-    with open(cfg.safelist, 'r') as slist:
-        s_lines = slist.readlines()
-
-    for s_line in s_lines:
-        s_line = s_line.strip()
-        b_count = count_specific_strings_in_file(cfg.blacklist, s_line)
-        w_count = count_specific_strings_in_file(cfg.weirdlist, s_line)
-
-        if b_count > 0 or w_count > 0:
-            print(f"> Filtering {s_line}")
-            with open(f"{cfg.safelist}", "r") as findsl:
-                data = findsl.read()
-                data = data.replace(s_line, '\n')
-            with open(f"{cfg.safelist}", "w") as findsl:
-                findsl.write(data)
+    remove_blacklisted_ids(cfg.safelist, cfg.blacklist, cfg.weirdlist)
+    print(f"> Filtered!")
 
 def remove_element(lst, element_to_remove):
     return [item for item in lst if item != element_to_remove]
@@ -252,6 +268,15 @@ def dd(file):
     remove_empty_lines(file)
     with open(file, 'a') as f:
         f.write('\n')
+        
+def count_specific_strings_in_file(file_path, target_string):
+    with open(file_path, 'r') as file:
+        content = file.read()
+        # Split the content into words based on whitespace
+        words = content.split()
+        # Count the number of occurrences of the target string
+        num_occurrences = words.count(target_string)
+        return num_occurrences
 
 def omgnick():
     print(f"\n\n{c.bgDefault}{c.LightMagenta}      -----------------------------    ")
@@ -265,15 +290,6 @@ if cfg.wh_enabled:
     url = f"https://api.hypixel.net/player?key={cfg.apikey}&uuid={uuid}"
     data = getInfo(url)
     webhook = Webhook(cfg.webhook)
-
-    def count_specific_strings_in_file(file_path, target_string):
-        with open(file_path, 'r') as file:
-            content = file.read()
-            # Split the content into words based on whitespace
-            words = content.split()
-            # Count the number of occurrences of the target string
-            num_occurrences = words.count(target_string)
-            return num_occurrences
 
     def hourlystats():
         starttime = datetime.now()
@@ -294,7 +310,6 @@ if cfg.wh_enabled:
 
         with open(cfg.hourly, 'w') as hourlyreset:
             hourlyreset.write('')
-
 
 # splash screen
 print("\n")
@@ -604,21 +619,14 @@ def readchat():
             if "[Client thread/INFO]: [CHAT] -dd" in line:
                 for samael_list in samael_lists:
                     dd(samael_list)
-                print('Fixed list formatting!')
+                print('> Fixed list formatting!')
 
             if "[Client thread/INFO]: [CHAT] -filter" in line:
-
                 filter_lists()
-                print('Filtered lists')
 
                 for samael_list in samael_lists:
                     dd(samael_list)
-                print('Fixed list formatting!')
-
-            if "[Client thread/INFO]: [CHAT] -clr" in line:
-                with open(cfg.record, 'w') as clrrec:
-                    clrrec.write('')
-                print('Cleared record!')
+                print('> Fixed list formatting!')
 
             if "[Client thread/INFO]: [CHAT] -note" in line:
                 if cfg.devmode: print(line)
@@ -631,7 +639,6 @@ def readchat():
                 note = line[notestart+2:noteend]
 
                 if name == '^':
-                    if cfg.devmode: print('NOTE ^ FLAG')
                     name = prevOpponent
                 elif name == '^^':
                     name = _2prevOpponent
@@ -1133,13 +1140,6 @@ def antisniper(name, rank):
                 print(f'Auto blacklist list: {autobl_list}')
                 print(f'Auto safelist list: {autosl_list}')
 
-            if len(autobl_list) > 0:
-                autobl_list.clear()
-                if cfg.devmode: print(f'Cleared autobl_list')
-            
-            if len(autosl_list) > 0:
-                autosl_list.clear()
-                if cfg.devmode: print(f'Cleared autosl_list')
 
             # Autolist
             if cfg.autoblacklist_loss_count > 0:
@@ -1154,6 +1154,14 @@ def antisniper(name, rank):
                         asl.write(f'{autosl_uuid}\n')
                 dd(cfg.safelist)
 
+
+            if len(autobl_list) > 1:
+                autobl_list.clear()
+                if cfg.devmode: print(f'Cleared autobl_list')
+            
+            if len(autosl_list) > 1:
+                autosl_list.clear()
+                if cfg.devmode: print(f'Cleared autosl_list')
 
 readchat()
 
