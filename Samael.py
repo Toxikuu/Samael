@@ -1,14 +1,100 @@
 # import libraries
-import math, time, os, sys, configparser, re, threading, requests
-from datetime import datetime; from dhooks import Webhook
+import math, os, sys, configparser, re, shutil
+from tox_assets import *
 
-# variables
-version = '5.0.8'
+# initialization variables
+version = '5.1.0'
 discord = "https://discord.gg/N3rVjjVEsv"
+
+home_dir = os.path.expanduser('~')
+samael_dir = os.path.join(home_dir, 'Samael')
 script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
-config_file = f'{script_directory}/config.ini'
+old_tox_assets_dir = os.path.join(script_directory, 'tox_assets.py')
+new_tox_assets_dir = os.path.join(samael_dir, 'tox_assets.py')
+samael_py = os.path.basename(__file__)
+correct_samael_py_path = os.path.join(samael_dir, samael_py)
+lists_directory = os.path.join(samael_dir, 'Lists')
+config_file = os.path.join(samael_dir, 'config.ini')
 config_ini = configparser.ConfigParser()
-# if i ever decide to implement it, user can be automatically gotten with getpass.getuser() using import getpass
+
+lunarlatestlog = os.path.join(home_dir, '.lunarclient', 'offline', 'multiver', 'logs', 'latest.log')
+blacklist_dir = os.path.join(lists_directory, 'Blacklist.log')
+safelist_dir = os.path.join(lists_directory, 'Safelist.log')
+weirdlist_dir = os.path.join(lists_directory, 'Weirdlist.log')
+record_dir = os.path.join(lists_directory, 'Record.log')
+notes_dir = os.path.join(lists_directory, 'Notes.log')
+s_logs = [blacklist_dir, safelist_dir, weirdlist_dir, record_dir, notes_dir]
+
+# creates samael folder in the home directory
+if not os.path.isdir(samael_dir):
+    os.makedirs(samael_dir)
+    print(f'Creating samael directory: {samael_dir}')
+
+# moves samael.py & tox_assets.py to that folder
+if script_directory != samael_dir:
+    shutil.move(__file__, correct_samael_py_path)
+    print(f'Moved {samael_py} to {correct_samael_py_path}')
+    shutil.move(old_tox_assets_dir, new_tox_assets_dir)
+    print(f'Moved tox_assets.py to {new_tox_assets_dir}')
+
+# build lists
+if not os.path.isdir(lists_directory):
+    os.makedirs(lists_directory)
+    print(f'Created lists directory: {lists_directory}')
+    for s_log in s_logs:
+        with open(s_log, 'x'): 
+            print(f'Created {s_log}')
+
+# build config
+if not os.path.isfile(config_file):
+    print(f'Creating config.ini at {config_file} since it doesn\'t exist')
+    print(f'Writing default config.ini')
+    config_ini['apikey'] = {'apikey': 'put your hypixel apikey here'}
+
+    config_ini['user'] = {'username': 'put your username here',
+                          'nick': 'put your nick here; if you aren\'t nicked, leave this blank'}
+    
+    config_ini['devmode'] = {'dev': 'False'}
+
+    config_ini['paths'] = {'chat': lunarlatestlog}
+
+    config_ini['safenicks'] = {'safenicks': 'examplenick1, examplenick2, examplenick3'}
+
+    config_ini['options'] = {'rounding_precision': '3',
+                             'show_own_stats': 'True',
+                             'clear': 'True'}
+    
+    config_ini['autolist'] = {'autosafelist_win_count': '2',
+                              'autoblacklist_loss_count': '1'}
+    
+    config_ini['delimiter'] = {'delimiter_type': '1'}
+
+    config_ini['stat toggles'] = {'nwl': 'True',
+                                  'sw_star': 'True',
+                                  'sw_kdr': 'True',
+                                  'bw_star': 'True',
+                                  'bw_fkdr': 'True',
+                                  'bw_bblr': 'True',
+                                  'bw_kdr': 'True',
+                                  'bw_fksperstar': 'True',
+                                  'sumo_wlr': 'True',
+                                  'sumo_bws': 'True',
+                                  'sumo_cws': 'True',
+                                  'uhc_wlr': 'True',
+                                  'uhc_kdr': 'True',
+                                  'duels_wlr': 'True',
+                                  'duels_wins': 'True',
+                                  'duels_losses': 'True',
+                                  'duels_bws': 'True',
+                                  'duels_cws': 'True',
+                                  'melee_accuracy': 'True',
+                                  'combo_melee_accuracy': 'True'}
+    
+    with open(config_file, 'w') as cf:
+        config_ini.write(cf)
+    print(f"Edit your config: {config_file}")
+    print("The script will automatically exit in 10 seconds."); time.sleep(10)
+    sys.exit(0)
 
 # colors
 class c:
@@ -71,18 +157,19 @@ def readcfg():
             # [user]
             samaeluser = config_ini.get('user', 'username')
             nick = config_ini.get('user', 'nick')
+            if nick.strip() == '':
+                nick = samaeluser
 
             # [devmode]
             devmode = config_ini.getboolean('devmode', 'dev')
 
             # [paths]
-            blacklist = config_ini.get('paths', 'blacklist')
-            safelist = config_ini.get('paths', 'safelist')
-            weirdlist = config_ini.get('paths', 'weirdlist')
-            record = config_ini.get('paths',  'record')
+            blacklist = os.path.join(lists_directory, 'Blacklist.log')
+            safelist = os.path.join(lists_directory, 'Safelist.log')
+            weirdlist = os.path.join(lists_directory, 'Weirdlist.log')
+            record = os.path.join(lists_directory, 'Record.log')
             chat = config_ini.get('paths', 'chat')
-            notes = config_ini.get('paths', 'notes')
-            hourly = config_ini.get('paths', 'hourly')
+            notes = os.path.join(lists_directory, 'Notes.log')
             
             # [safenicks]
             safenicks = config_ini.get('safenicks', 'safenicks')
@@ -91,6 +178,7 @@ def readcfg():
             # [options]
             rounding_precision = config_ini.getint('options', 'rounding_precision')
             show_own_stats = config_ini.getboolean('options', 'show_own_stats')
+            clear = config_ini.getboolean('options', 'clear')
 
             # [autolist]
             autosafelist_win_count = config_ini.getint('autolist', 'autosafelist_win_count')
@@ -127,19 +215,9 @@ def readcfg():
             melee_accuracy = config_ini.getboolean('stat toggles', 'melee_accuracy')
             combo_melee_accuracy = config_ini.getboolean('stat toggles', 'combo_melee_accuracy')
 
-            wh_enabled = config_ini.getboolean('webhook', 'wh_enabled')
-            if wh_enabled:
-                webhook = config_ini.get('webhook', 'webhook')
-                interval = config_ini.getint('webhook', 'interval')
-
 readcfg()
 cfg_toggles = ['nwl', 'sw_star', 'sw_kdr', 'bw_star', 'bw_fkdr', 'bw_bblr', 'bw_kdr', 'bw_fksperstar', 'sumo_wlr', 
                'sumo_bws', 'sumo_cws', 'uhc_wlr', 'uhc_kdr', 'duels_wlr', 'duels_wins', 'duels_losses', 'duels_bws', 'duels_cws', 'melee_accuracy',  'combo_melee_accuracy']
-
-# clear hourly
-if cfg.wh_enabled:
-    with open(cfg.hourly, 'w') as clrhr:
-        clrhr.write('')
 
 # delimiter fix
 if cfg.delimiter_type == 0:
@@ -150,7 +228,7 @@ elif cfg.delimiter_type == 1:
 if cfg.devmode: print(f'Delimiter type: {delimiter}')
 
 # main lists
-samael_lists = [cfg.blacklist, cfg.safelist, cfg.weirdlist]
+samael_lists = [blacklist_dir, safelist_dir, weirdlist_dir]
 
 # devmode
 if cfg.devmode:
@@ -160,40 +238,7 @@ if cfg.devmode:
     print(config_data_dev)
 
 # some functions
-def read_ids_from_file(filename):
-    ids = set()
-    with open(filename, 'r') as file:
-        for line in file:
-            ids.add(line.strip())
-    return ids
-
-def remove_blacklisted_ids(safelist, blacklist, weirdlist):
-    safelist_ids = read_ids_from_file(safelist)
-    blacklist_ids = read_ids_from_file(blacklist)
-    weirdlist_ids = read_ids_from_file(weirdlist)
-    blacklist_ids.update(weirdlist_ids)
-    
-    removed_ids = safelist_ids.intersection(blacklist_ids)
-    
-    num_removed = 0
-    if removed_ids:
-        for id_ in removed_ids:
-            num_removed += 1
-        safelist_ids -= removed_ids
-    
-        with open(safelist, 'w') as file:
-            for id_ in safelist_ids:
-                file.write(id_ + '\n')
-        print(f'> Removed {num_removed} blacklisted/weirdlisted UUIDs from safelist.')
-
-    else:
-        print("> No UUIDs to remove from the safelist.")
-
-def getInfo(call):
-    r = requests.get(call)
-    return r.json()
-
-def igntouuid(ign):
+def S_igntouuid(ign):
     try:
         pdb = getInfo(f"https://playerdb.co/api/player/minecraft/{ign}")
         uuid = pdb["data"]["player"]["raw_id"]
@@ -201,50 +246,9 @@ def igntouuid(ign):
     except:
         print(f'\n{c.LightRed} >> {c.bgRed}{c.Black} Failed to access uuid for {ign}! {c.allDefault}{c.LightRed} <<{c.allDefault}')
 
-def follow(thefile):
-    thefile.seek(0,2)
-    while True:
-        line = thefile.readline()
-        if not line:
-            time.sleep(0.04)
-            continue
-        yield line
-
-def countOf(list, x):
-    count = 0
-    for element in list:
-        if element == x:
-            count += 1
-    return count
-
 def filter_lists():
-    remove_blacklisted_ids(cfg.safelist, cfg.blacklist, cfg.weirdlist)
+    remove_blacklisted_ids(safelist_dir, blacklist_dir, weirdlist_dir)
     print(f"> Filtered!")
-
-def remove_element(lst, element_to_remove):
-    return [item for item in lst if item != element_to_remove]
-
-def write_list_to_txt(lst, filename):
-    with open(filename, 'w') as file:
-        for item in lst:
-            file.write(str(item) + '\n')
-
-def remove_empty_lines(filename):
-    with open(filename, 'r') as file:
-        lines = file.readlines()
-
-    # Remove empty lines
-    non_empty_lines = [line.strip() for line in lines if line.strip()]
-
-    with open(filename, 'w') as file:
-        file.writelines('\n'.join(non_empty_lines))
-
-def remove_none(filename):
-    with open(filename, 'r') as f:
-        filedata = f.read()
-        filedata = filedata.replace('None', '')
-    with open(filename, 'w') as f:
-        f.write(filedata)
 
 def set_all_true_in_section(section):
     for option in config_ini.options(section):
@@ -268,86 +272,25 @@ def dd(file):
     remove_empty_lines(file)
     with open(file, 'a') as f:
         f.write('\n')
-        
-def count_specific_strings_in_file(file_path, target_string):
-    with open(file_path, 'r') as file:
-        content = file.read()
-        # Split the content into words based on whitespace
-        words = content.split()
-        # Count the number of occurrences of the target string
-        num_occurrences = words.count(target_string)
-        return num_occurrences
 
 def omgnick():
     print(f"\n\n{c.bgDefault}{c.LightMagenta}      -----------------------------    ")
     print(f"{c.LightMagenta} >> {c.bgMagenta}{c.Black} NICK OMG WTF DODGE NICK DODGE!! {c.bgDefault}{c.LightMagenta} <<")
     print(f"{c.bgDefault}{c.LightMagenta}      -----------------------------    {c.White}")
 
-# Hourly dependencies
-if cfg.wh_enabled:
-
-    uuid = igntouuid(cfg.samaeluser)
-    url = f"https://api.hypixel.net/player?key={cfg.apikey}&uuid={uuid}"
-    data = getInfo(url)
-    webhook = Webhook(cfg.webhook)
-
-    def hourlystats():
-        starttime = datetime.now()
-        time.sleep(cfg.interval)
-
-        hourlywins = count_specific_strings_in_file(cfg.hourly, 'W')
-        hourlylosses = count_specific_strings_in_file(cfg.hourly, 'L')
-
-        endtime = datetime.now()
-
-        hourlywlr = round(hourlywins/max(hourlylosses,1), cfg.rounding_precision)
-
-        hourlywlr = hourlywins/round(max(hourlylosses,1), cfg.rounding_precision)
-        webhookdata = f"# Stats for {cfg.samaeluser} over the last {cfg.interval} seconds\nStart: {starttime}\nEnd: {endtime}\n-----\n- Hourly wins: {hourlywins}\n- Hourly losses: {hourlylosses}\n- Hourly wlr: {hourlywlr}"
-
-        print(webhookdata)
-        webhook.send(webhookdata)
-
-        with open(cfg.hourly, 'w') as hourlyreset:
-            hourlyreset.write('')
-
 # splash screen
-print("\n")
-print(f"{c.Red}███████╗ █████╗ ███╗   ███╗ █████╗ ███████╗██╗     ")
-print(f"{c.Red}██╔════╝██╔══██╗████╗ ████║██╔══██╗██╔════╝██║     ")
-print(f"{c.Red}███████╗███████║██╔████╔██║███████║█████╗  ██║     ")
-print(f"{c.Red}╚════██║██╔══██║██║╚██╔╝██║██╔══██║██╔══╝  ██║     ")
-print(f"{c.Red}███████║██║  ██║██║ ╚═╝ ██║██║  ██║███████╗███████╗")
-print(f"{c.Red}╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝")
-                                                                                                        
-
+Samael_text(c.Red)                                                                                         
 print(f"{c.bgDefault}{c.White}\n {c.stBold}>>> Version {version}{c.allDefault}")
 print(f"{c.bgDefault}{c.White} > Use alongside Lilith")
 print(f"{c.bgDefault}{c.White} > Made by Toxikuu, Hollow, & Scycle")
 print(f"{c.bgDefault}{c.White} > Special thanks to:")
 print(f"{c.bgDefault}{c.White}     > Nolqk, Zani, Sedged, Yhuvko, Praxzz, Virse, Plonk, i5tar, Nea, Nuclear")
 print(f"{c.bgDefault}{c.White} > Join the Discord! {discord}")
-
 print("\n\n")
 
 # clears record on start
-with open(cfg.record, 'w') as clrrec:
+with open(record_dir, 'w') as clrrec:
     clrrec.write('')
-
-if cfg.wh_enabled:
-    # Hourly stats
-    def hourly_function():
-        while True:
-            hourlystats()
-            
-
-    # Create a thread for the hourly function
-    hourly_thread = threading.Thread(target=hourly_function)
-    # Set the thread as a daemon so it will terminate when the main program terminates
-    hourly_thread.daemon = True
-    # Start the thread
-    hourly_thread.start()
-
 
 # read chat
 def readchat():
@@ -441,14 +384,11 @@ def readchat():
                     won_opponent = iso1
                 
                 print(f"\n [i] You won against {won_opponent}")
-                won_uuid = igntouuid(won_opponent)
+                won_uuid = S_igntouuid(won_opponent)
                 if cfg.devmode: print(f"\nUUID: {won_uuid}")
 
-                with open(cfg.record, 'a') as wrec:
-                    wrec.write(f"Won against {won_uuid}\n")
-
-                with open(cfg.hourly, 'a') as whr:
-                    whr.write(f"{datetime.now()} >> W\n")            
+                with open(record_dir, 'a') as wrec:
+                    wrec.write(f"Won against {won_uuid}\n")     
 
             elif "[Client thread/INFO]: [CHAT]   " in line and "WINNER!\n" in line:
                 isol1start = line.index(cfg.nick)
@@ -465,14 +405,11 @@ def readchat():
                     lost_opponent = isol1
 
                 print(f"\n [i] You lost to {lost_opponent}")
-                lost_uuid = igntouuid(lost_opponent)
+                lost_uuid = S_igntouuid(lost_opponent)
                 if cfg.devmode: print(f"\nUUID: {lost_uuid}")
 
-                with open(cfg.record, 'a') as wrec:
+                with open(record_dir, 'a') as wrec:
                     wrec.write(f"Lost to {lost_uuid}\n")
-            
-                with open(cfg.hourly, 'a') as whr:
-                    whr.write(f"{datetime.now()} >> L\n")
 
             if "[Client thread/INFO]: [CHAT]   " in line and "Opponent:" in line:
                 iso1s = line.index("Opponent:")
@@ -509,25 +446,25 @@ def readchat():
                     def addtolist(_name):
                         print(f'> Fetching uuid for {_name}')
                         try:
-                            uuid = igntouuid(_name)
+                            uuid = S_igntouuid(_name)
 
                             if addcommand == 'b':
                                 print(f"> Blacklisting", uuid)
-                                with open(f"{cfg.blacklist}", "a") as bl:
+                                with open(f"{blacklist_dir}", "a") as bl:
                                     bl.write(f"\n{uuid}\n")
                                 print(f"> Added {_name} to blacklist\n")
 
 
                             elif addcommand == 's':
                                 print(f"> Safelisting", uuid)
-                                with open(f"{cfg.safelist}", "a") as sl:
+                                with open(f"{safelist_dir}", "a") as sl:
                                     sl.write(f"\n{uuid}\n")
                                 print(f"> Added {_name} to safelist\n")
 
 
                             elif addcommand == 'w':
                                 print(f"> Weirdlisting", uuid)
-                                with open(f"{cfg.weirdlist}", "a") as wl:
+                                with open(f"{weirdlist_dir}", "a") as wl:
                                     wl.write(f"\n{uuid}\n")
                                 print(f"> Added {_name} to weirdlist\n")
 
@@ -555,33 +492,33 @@ def readchat():
                     def removefromlist(_name):
                         print("> Fetching uuid for", _name)
                         try:
-                            uuid = igntouuid(_name)
+                            uuid = S_igntouuid(_name)
 
                             if removecommand == 'rb':
                                 print(f"> Removing {uuid} from blacklist")
-                                with open(f"{cfg.blacklist}", "r") as findbl:
-                                    data = findbl.read()
-                                    data = data.replace(uuid, '\n')
-                                with open(f"{cfg.safelist}", "w") as findbl:
-                                    findbl.write(data)
+                                with open(f"{blacklist_dir}", "r") as findbl:
+                                    hy = findbl.read()
+                                    hy = hy.replace(uuid, '\n')
+                                with open(f"{safelist_dir}", "w") as findbl:
+                                    findbl.write(hy)
                                 print(f"> Removed {_name} from blacklist\n")
 
                             elif removecommand == 'rs':
                                 print(f"> Removing {uuid} from safelist")
-                                with open(f"{cfg.safelist}", "r") as findsl:
-                                    data = findsl.read()
-                                    data = data.replace(uuid, '\n')
-                                with open(f"{cfg.safelist}", "w") as findsl:
-                                    findsl.write(data)
+                                with open(f"{safelist_dir}", "r") as findsl:
+                                    hy = findsl.read()
+                                    hy = hy.replace(uuid, '\n')
+                                with open(f"{safelist_dir}", "w") as findsl:
+                                    findsl.write(hy)
                                 print(f"> Removed {_name} from safelist\n")
 
                             elif removecommand == 'rw':
                                 print(f"> Removing {uuid} from weirdlist")
-                                with open(f"{cfg.weirdlist}", "r") as findwl:
-                                    data = findwl.read()
-                                    data = data.replace(uuid, '\n')
-                                with open(f"{cfg.weirdlist}", "w") as findwl:
-                                    findwl.write(data)
+                                with open(f"{weirdlist_dir}", "r") as findwl:
+                                    hy = findwl.read()
+                                    hy = hy.replace(uuid, '\n')
+                                with open(f"{weirdlist_dir}", "w") as findwl:
+                                    findwl.write(hy)
                                 print(f"> Removed {_name} from weirdlist\n")
 
                         except KeyError:
@@ -645,11 +582,11 @@ def readchat():
                 print(f' [n] Note: {note}')
                 print(f" [n] Grabbing {name}'s uuid")
                 try:
-                    note_uuid = igntouuid(name)
+                    note_uuid = S_igntouuid(name)
 
                     print(f" [n] UUID: {note_uuid}")
                     print(f" [n] Taking notes")
-                    with open(cfg.notes, 'a') as nappend:
+                    with open(notes_dir, 'a') as nappend:
                         nappend.write(f'Target: {name} UUID: {note_uuid} Note: "{note}"\n')
                     print(f" [n] Noted {name}")
                 except:
@@ -746,33 +683,34 @@ def readchat():
 
 # antisniper
 def antisniper(name, rank):
+        if cfg.clear: clear()
         print(f"\n\n{c.stBold}Checking: {rank} {name}{c.allDefault}")   
 
-        uuid = igntouuid(name)
+        uuid = S_igntouuid(name)
         if uuid != None:
             url = f"https://api.hypixel.net/player?key={cfg.apikey}&uuid={uuid}"
-            data = getInfo(url)
+            hy = getInfo(url)
 
             # BEDWARS
-            try: stat_bedwars_star = data["player"]["achievements"]["bedwars_level"]
+            try: stat_bedwars_star = hy["player"]["achievements"]["bedwars_level"]
             except KeyError: stat_bedwars_star = 0
 
-            try: stat_bedwars_final_kills = data["player"]["stats"]["Bedwars"]["final_kills_bedwars"]
+            try: stat_bedwars_final_kills = hy["player"]["stats"]["Bedwars"]["final_kills_bedwars"]
             except KeyError: stat_bedwars_final_kills = 0
 
-            try: stat_bedwars_final_deaths = data["player"]["stats"]["Bedwars"]["final_deaths_bedwars"]
+            try: stat_bedwars_final_deaths = hy["player"]["stats"]["Bedwars"]["final_deaths_bedwars"]
             except KeyError: stat_bedwars_final_deaths = 0
 
-            try: stat_bedwars_beds_broken = data["player"]["stats"]["Bedwars"]["beds_broken_bedwars"]
+            try: stat_bedwars_beds_broken = hy["player"]["stats"]["Bedwars"]["beds_broken_bedwars"]
             except KeyError: stat_bedwars_beds_broken = 0
 
-            try: stat_bedwars_beds_lost = data["player"]["stats"]["Bedwars"]["beds_lost_bedwars"]
+            try: stat_bedwars_beds_lost = hy["player"]["stats"]["Bedwars"]["beds_lost_bedwars"]
             except KeyError: stat_bedwars_beds_lost = 0
 
-            try: stat_bw_kills = data["player"]["stats"]["Bedwars"]["kills_bedwars"]
+            try: stat_bw_kills = hy["player"]["stats"]["Bedwars"]["kills_bedwars"]
             except KeyError: stat_bw_kills = 0
 
-            try: stat_bw_deaths = data["player"]["stats"]["Bedwars"]["deaths_bedwars"]
+            try: stat_bw_deaths = hy["player"]["stats"]["Bedwars"]["deaths_bedwars"]
             except KeyError: stat_bw_deaths = 0
             
             stat_bblr = round((stat_bedwars_beds_broken/max(stat_bedwars_beds_lost,1)),cfg.rounding_precision)
@@ -782,13 +720,13 @@ def antisniper(name, rank):
 
 
             # SKYWARS
-            try: stat_level_formatted = data["player"]["stats"]["SkyWars"]["levelFormatted"]
+            try: stat_level_formatted = hy["player"]["stats"]["SkyWars"]["levelFormatted"]
             except KeyError: stat_level_formatted = "xx0x"
 
-            try: stat_skywars_kills = data["player"]["stats"]["SkyWars"]["kills"]
+            try: stat_skywars_kills = hy["player"]["stats"]["SkyWars"]["kills"]
             except KeyError: stat_skywars_kills = 0
 
-            try: stat_skywars_deaths = data["player"]["stats"]["SkyWars"]["deaths"]
+            try: stat_skywars_deaths = hy["player"]["stats"]["SkyWars"]["deaths"]
             except KeyError: stat_skywars_deaths = 0
 
             stat_skywars_kdr = round((stat_skywars_kills/max(stat_skywars_deaths,1)), cfg.rounding_precision)
@@ -797,67 +735,67 @@ def antisniper(name, rank):
 
 
             # SUMO
-            try: stat_sumo_duel_wins = data["player"]["stats"]["Duels"]["sumo_duel_wins"]
+            try: stat_sumo_duel_wins = hy["player"]["stats"]["Duels"]["sumo_duel_wins"]
             except KeyError: stat_sumo_duel_wins = 0
 
-            try: stat_sumo_duel_losses = data["player"]["stats"]["Duels"]["sumo_duel_losses"]
+            try: stat_sumo_duel_losses = hy["player"]["stats"]["Duels"]["sumo_duel_losses"]
             except KeyError: stat_sumo_duel_losses = 0  
 
-            try: stat_sumo_bws = data["player"]["stats"]["Duels"]["best_sumo_winstreak"]
+            try: stat_sumo_bws = hy["player"]["stats"]["Duels"]["best_sumo_winstreak"]
             except KeyError: stat_sumo_bws = 0
 
-            try: stat_sumo_cws = data["player"]["stats"]["Duels"]["current_sumo_winstreak"]
+            try: stat_sumo_cws = hy["player"]["stats"]["Duels"]["current_sumo_winstreak"]
             except KeyError: stat_sumo_cws = 0
 
             sumowlr = round((stat_sumo_duel_wins/max(stat_sumo_duel_losses, 1)), cfg.rounding_precision)
 
 
             # UHC DUELS
-            try: stat_uhc_duel_wins = data["player"]["stats"]["Duels"]["uhc_duel_wins"]
+            try: stat_uhc_duel_wins = hy["player"]["stats"]["Duels"]["uhc_duel_wins"]
             except KeyError: stat_uhc_duel_wins = 0
 
-            try: stat_uhc_duel_losses = data["player"]["stats"]["Duels"]["uhc_duel_losses"]
+            try: stat_uhc_duel_losses = hy["player"]["stats"]["Duels"]["uhc_duel_losses"]
             except KeyError: stat_uhc_duel_losses = 0
 
             uhcwlr = round((stat_uhc_duel_wins/max(stat_uhc_duel_losses, 1)), cfg.rounding_precision)
 
 
             # REAL UHC
-            try: stat_UHC_kills = data["player"]["stats"]["UHC"]["kills_solo"] + data["player"]["stats"]["UHC"]["kills"]
+            try: stat_UHC_kills = hy["player"]["stats"]["UHC"]["kills_solo"] + hy["player"]["stats"]["UHC"]["kills"]
             except KeyError: stat_UHC_kills = 0
 
-            try: stat_UHC_deaths = data["player"]["stats"]["UHC"]["deaths_solo"] + data["player"]["stats"]["UHC"]["deaths"]
+            try: stat_UHC_deaths = hy["player"]["stats"]["UHC"]["deaths_solo"] + hy["player"]["stats"]["UHC"]["deaths"]
             except KeyError: stat_UHC_deaths = 0
 
             uhckdr = round((stat_UHC_kills/max(stat_UHC_deaths, 1)), cfg.rounding_precision)
 
 
             # GENERAL DUELS
-            try: stat_duels_wins = data["player"]["stats"]["Duels"]["wins"]
+            try: stat_duels_wins = hy["player"]["stats"]["Duels"]["wins"]
             except KeyError: stat_duels_wins = 0
 
-            try: stat_duels_losses = data["player"]["stats"]["Duels"]["losses"]
+            try: stat_duels_losses = hy["player"]["stats"]["Duels"]["losses"]
             except KeyError: stat_duels_losses = 0
 
-            try: stat_duels_bws = data["player"]["stats"]["Duels"]["best_overall_winstreak"]
+            try: stat_duels_bws = hy["player"]["stats"]["Duels"]["best_overall_winstreak"]
             except KeyError: stat_duels_bws = 0
 
-            try: stat_duels_cws = data["player"]["stats"]["Duels"]["current_winstreak"]
+            try: stat_duels_cws = hy["player"]["stats"]["Duels"]["current_winstreak"]
             except KeyError: stat_duels_cws = 0
 
             wlr = round((stat_duels_wins/max(stat_duels_losses, 1)), cfg.rounding_precision)
 
             # MELEE
-            try: stat_duels_melee_hits = data["player"]["stats"]["Duels"]["melee_hits"]
+            try: stat_duels_melee_hits = hy["player"]["stats"]["Duels"]["melee_hits"]
             except KeyError: stat_duels_melee_hits = 0
 
-            try: stat_duels_melee_swings = data["player"]["stats"]["Duels"]["melee_swings"]
+            try: stat_duels_melee_swings = hy["player"]["stats"]["Duels"]["melee_swings"]
             except KeyError: stat_duels_melee_swings = 0
 
-            try: stat_duels_combo_melee_hits = data["player"]["stats"]["Duels"]["combo_duel_melee_hits"]
+            try: stat_duels_combo_melee_hits = hy["player"]["stats"]["Duels"]["combo_duel_melee_hits"]
             except KeyError: stat_duels_combo_melee_hits = 0
 
-            try: stat_duels_combo_melee_swings = data["player"]["stats"]["Duels"]["combo_duel_melee_swings"]
+            try: stat_duels_combo_melee_swings = hy["player"]["stats"]["Duels"]["combo_duel_melee_swings"]
             except KeyError: stat_duels_combo_melee_swings = 0
 
             nocombomeleehits = stat_duels_melee_hits-stat_duels_combo_melee_hits
@@ -866,7 +804,7 @@ def antisniper(name, rank):
             stat_combo_melee_accuracy = round((stat_duels_combo_melee_hits/max(stat_duels_combo_melee_swings,1)*100), cfg.rounding_precision)
 
             # NWL
-            try: hypixelxp = data["player"]["networkExp"]
+            try: hypixelxp = hy["player"]["networkExp"]
             except KeyError: hypixelxp = 0
 
             nwl = round(((math.sqrt((2 * hypixelxp) + 30625) / 50) - 2.5), cfg.rounding_precision)
@@ -1067,7 +1005,7 @@ def antisniper(name, rank):
                 api_on = False
 
             # Read blacklist
-            with open(cfg.blacklist, 'r') as bl:
+            with open(blacklist_dir, 'r') as bl:
                 for line in bl.readlines():
                     line = line.strip()
                     if line == uuid:
@@ -1075,7 +1013,7 @@ def antisniper(name, rank):
                         print(f"{c.LightBlue} >> {c.bgBlue}{c.Black} BLACKLISTED! {c.bgDefault}{c.LightBlue} << {c.Default}")
 
             # Read safelist
-            with open(cfg.safelist, 'r') as sl:
+            with open(safelist_dir, 'r') as sl:
                 for line in sl.readlines():
                     line = line.strip()
                     if line == uuid:
@@ -1083,7 +1021,7 @@ def antisniper(name, rank):
                         print(f"{c.LightGreen} >> {c.bgGreen}{c.Black} SAFELISTED! {c.bgDefault}{c.LightGreen} << {c.Default}")
 
             # Read weirdlist
-            with open(cfg.weirdlist, 'r') as wl:
+            with open(weirdlist_dir, 'r') as wl:
                 for line in wl.readlines():
                     line = line.strip()
                     if line == uuid:
@@ -1091,7 +1029,7 @@ def antisniper(name, rank):
                         print(f"{c.LightYellow} >> {c.bgYellow}{c.Black} WEIRD! {c.bgDefault}{c.LightYellow} << {c.Default}")
 
             # Read notes
-            with open(cfg.notes, 'r') as rnotes:
+            with open(notes_dir, 'r') as rnotes:
                 for nline in rnotes.readlines():
                     if uuid in nline:
                         if cfg.devmode: print(nline)
@@ -1105,7 +1043,7 @@ def antisniper(name, rank):
             rec_won_uuids = []
             autobl_list = []
             autosl_list = []
-            with open(cfg.record, 'r') as rrec:
+            with open(record_dir, 'r') as rrec:
                 for line in rrec.readlines():
                     if 'Lost to' in line:
                         rec_lost_uuid = line.replace('Lost to ', '')
@@ -1143,16 +1081,16 @@ def antisniper(name, rank):
 
             # Autolist
             if cfg.autoblacklist_loss_count > 0:
-                with open(cfg.blacklist, 'a') as abl:
+                with open(blacklist_dir, 'a') as abl:
                     for autobl_uuid in autobl_list:
                         abl.write(f'{autobl_uuid}\n')
-                dd(cfg.blacklist)
+                dd(blacklist_dir)
 
             if cfg.autosafelist_win_count > 0:
-                with open(cfg.safelist, 'a') as asl:
+                with open(safelist_dir, 'a') as asl:
                     for autosl_uuid in autosl_list:
                         asl.write(f'{autosl_uuid}\n')
-                dd(cfg.safelist)
+                dd(safelist_dir)
 
 
             if len(autobl_list) > 1:
@@ -1164,4 +1102,3 @@ def antisniper(name, rank):
                 if cfg.devmode: print(f'Cleared autosl_list')
 
 readchat()
-
