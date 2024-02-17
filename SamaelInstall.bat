@@ -2,9 +2,11 @@
 
 rem Define the Python version to install
 set PYTHON_VERSION=3.12.2
+echo Downloading python version %PYTHON_VERSION%
 
 rem Define the installation directory
 set INSTALL_DIR=C:\Python\%PYTHON_VERSION%
+echo Installation directory: %INSTALL_DIR%
 
 rem Define the download URL for Python
 set DOWNLOAD_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-amd64.exe
@@ -13,11 +15,14 @@ rem Create the installation directory
 mkdir %INSTALL_DIR%
 
 rem Download Python installer using PowerShell
+echo Downloading Python with PowerShell
 powershell -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile 'python-installer.exe'"
 
 rem Install Python silently
+echo Installing Python
 python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
 
+echo Validating installation
 rem Check if Python was installed successfully by running `python --version`
 python --version > nul 2>&1
 if %errorlevel%==0 (
@@ -28,6 +33,7 @@ if %errorlevel%==0 (
     set SUCCESS=1
 )
 
+echo Deleting Python installer
 rem Remove the Python installer
 del python-installer.exe
 
@@ -44,6 +50,7 @@ echo Installing Samael dependencies...
 
 rem List of modules to install
 set "MODULES=requests"
+echo Pip installing necessary python libraries
 
 rem Loop through modules and install
 for %%i in (%MODULES%) do (
@@ -54,9 +61,9 @@ echo Dependencies installed.
 
 
 
-echo Downloading Samael from Github...
 rem Define Samael version
-set SAMAEL_VERSION=5.1.1
+set SAMAEL_VERSION=v5.1.1
+echo Downloading Samael %SAMAEL_VERSION% from Github...
 
 rem Define the destination directory using the current user's profile directory
 set DESTINATION_DIR=%USERPROFILE%\Samael
@@ -67,6 +74,7 @@ mkdir "%DESTINATION_DIR%" 2>nul
 rem Define the URL of the raw file on GitHub
 set FILE_URL=https://raw.githubusercontent.com/Toxikuu/Samael/%SAMAEL_VERSION%/Samael.py
 
+echo Downloading Samael.py to %DESTINATION_DIR%\Samael.py with PowerShell
 rem Download the file using PowerShell
 powershell -Command "Invoke-WebRequest -Uri '%FILE_URL%' -OutFile '%DESTINATION_DIR%\Samael.py'"
 
