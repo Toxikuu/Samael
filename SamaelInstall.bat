@@ -62,7 +62,7 @@ echo Dependencies installed.
 
 
 rem Define Samael version
-set SAMAEL_VERSION=v5.1.1
+set SAMAEL_VERSION=v5.1.2
 echo Downloading Samael %SAMAEL_VERSION% from Github...
 
 rem Define the destination directory using the current user's profile directory
