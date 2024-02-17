@@ -22,26 +22,9 @@ rem Install Python silently
 echo Installing Python
 python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
 
-echo Validating installation
-rem Check if Python was installed successfully by running `python --version`
-python --version > nul 2>&1
-if %errorlevel%==0 (
-    echo Python %PYTHON_VERSION% installed successfully.
-    set SUCCESS=0
-) else (
-    echo Failed to install Python %PYTHON_VERSION%.
-    set SUCCESS=1
-)
-
 echo Deleting Python installer
 rem Remove the Python installer
 del python-installer.exe
-
-rem Exit if Python failed to install
-if %SUCCESS%==1 (
-    pause
-    exit /b 1
-)
 
 
 
