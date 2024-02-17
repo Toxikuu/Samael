@@ -1,36 +1,31 @@
 @echo off
 
-rem Check if Python is already installed
-python --version > nul 2>&1
-if %errorlevel%==0 (
-    echo Python is already installed.
-) else (
-	rem Define the Python version to install
-	set PYTHON_VERSION=3.12.2
-	echo Downloading python version %PYTHON_VERSION%
+rem Define the Python version to install
+set PYTHON_VERSION=3.12.2
+echo Downloading python version %PYTHON_VERSION%
 
-	rem Define the installation directory
-	set INSTALL_DIR=C:\Python\%PYTHON_VERSION%
-	echo Installation directory: %INSTALL_DIR%
+rem Define the installation directory
+set INSTALL_DIR=C:\Python\%PYTHON_VERSION%
+echo Installation directory: %INSTALL_DIR%
 
-	rem Define the download URL for Python
-	set DOWNLOAD_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-amd64.exe
+rem Define the download URL for Python
+set DOWNLOAD_URL=https://www.python.org/ftp/python/%PYTHON_VERSION%/python-%PYTHON_VERSION%-amd64.exe
 
-	rem Create the installation directory
-	mkdir %INSTALL_DIR%
+rem Create the installation directory
+mkdir %INSTALL_DIR%
 
-	rem Download Python installer using PowerShell
-	echo Downloading Python with PowerShell
-	powershell -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile 'python-installer.exe'"
+rem Download Python installer using PowerShell
+echo Downloading Python with PowerShell
+powershell -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile 'python-installer.exe'"
 
-	rem Install Python silently
-	echo Installing Python
-	python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
+rem Install Python silently
+echo Installing Python
+python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0
 
-	echo Deleting Python installer
-	rem Remove the Python installer
-	del python-installer.exe
-)
+echo Deleting Python installer
+rem Remove the Python installer
+del python-installer.exe
+set PATH=%PATH%
 
 
 rem Install Samael dependencies
@@ -70,13 +65,13 @@ powershell -Command "Invoke-WebRequest -Uri '%TOX_ASSETS_URL%' -OutFile '%DESTIN
 
 rem Check PowerShell exit code
 if %errorlevel%==0 (
-    echo Samael downloaded successfully.
+    echo Downloaded successfully.
     echo Now run %DESTINATION_DIR%\Samael.py
     echo After running Samael.py, you'll have to edit the config. Then you'll be done!
     pause
     exit /b 0
 ) else (
-    echo Failed to download Samael.
+    echo Failed to download.
     pause
     exit /b 1
 )
