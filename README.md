@@ -10,32 +10,29 @@
     Samael is licensed under the MIT License.
 
 # Prerequisites
-    To use Samael, you need to have Python installed.
-    It's also highly recommended that you add Python to path.
-    I also recommend Windows Terminal to launch it as it makes your life much easier (it fixes weird color and formatting issues).
-    To install the dependencies, run dependencies.bat (this will pip install requests and dhooks)
+    I recommend windows terminal.
+    The default command prompt doesn't show colors for some people.
 
-# Setup
-    Extract Samael.zip to your desktop (or wherever you want).
+# Installation
+    Run SamaelInstall.bat.
 
 # Config
-    You'll have to edit the config.ini.
+    You'll have to edit the config.ini after running the install script.
     See the comments within the file for more information.
     
 # Lists
     Blacklist stores UUIDs of players Samael shows as blacklisted.
     Safelist stores UUIDs of players Samael shows as safelisted.
     Weirdlist stores UUIDs of players Samael shows as weirdlisted. (Think of this like a risky tag whereas blacklist is a sniper tag.)
+    Notes stores the notes you make.
     Record keeps track of who you win and lose to.
     This is used to automatically safelist or blacklist players.
-    Notes stores the notes you make.
-    Hourly stores session stats if you decide to use the webhook.
  
 # Launching
     Once you've set up and configured Samael, run it with:
-    python <your samael.py path>
-    Or create a launch.bat with the python run command.
-    Or double click samael.py
+    python your/samael/path/samael.py
+    (or you can double click samael.py)
+    I'll upload a Samael.bat to launch Samael from its default directory soonish.
 
 # Commands
     Samael commands use the following format (typed in Minecraft chat): /fakechat -command argument.
