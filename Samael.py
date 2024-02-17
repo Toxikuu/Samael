@@ -3,7 +3,7 @@ import math, os, sys, configparser, re, shutil
 from tox_assets import *
 
 # initialization variables
-version = '5.1.0'
+version = '5.1.2'
 discord = "https://discord.gg/N3rVjjVEsv"
 
 home_dir = os.path.expanduser('~')
