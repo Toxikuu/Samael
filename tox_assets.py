@@ -16,6 +16,14 @@ def igntouuid(ign):
         print(f"Failed to access uuid for {ign}")
     return uuid
 
+def mojang_igntouuid(ign):
+    try:
+        moj = getInfo(f"https://api.mojang.com/users/profiles/minecraft/{ign}")
+        uuid = moj["id"]
+    except:
+        print(f"Failed to access uuid for {ign}")
+    return uuid   
+
 def uuidtoign(uuid):
     try:
         pdb = getInfo(f"https://playerdb.co/api/player/minecraft/{uuid}")
@@ -23,6 +31,14 @@ def uuidtoign(uuid):
     except:
         print(f"Failed to access ign for {uuid}")
     return ignfromuuid
+
+def mojang_uuidtoign(uuid):
+    try:
+        moj = getInfo(f"https://api.mojang.com/users/profiles/minecraft/{uuid}")
+        ignfromuuid = moj["id"]
+    except:
+        print(f"Failed to access ign for {uuid}")
+    return ignfromuuid   
 
 def clear():
     if os.name == 'nt':
@@ -52,6 +68,8 @@ def get_hypixel_stats(apikey, uuid):
         url = f"https://api.hypixel.net/player?key={apikey}&uuid={uuid}"
         data = getInfo(url)
         return data
+    else:
+        return None
 
 def read_ids_from_file(filename):
     ids = set()
@@ -140,3 +158,44 @@ def Samael_text(color):
     print(f"{color}╚════██║██╔══██║██║╚██╔╝██║██╔══██║██╔══╝  ██║     ")
     print(f"{color}███████║██║  ██║██║ ╚═╝ ██║██║  ██║███████╗███████╗")
     print(f"{color}╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝")
+
+def get_value_from_json(json_obj, path):
+    # Split the path into individual keys
+    keys = path.split('.')
+
+    # Iterate through the keys to traverse the JSON object
+    current = json_obj
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            current = 0
+
+    return current
+
+def get_guild_data(apikey, uuid):
+    guildurl = f'https://api.hypixel.net/guild?key={apikey}&player={uuid}'
+    if uuid != None:
+        gdata = getInfo(guildurl)
+        return gdata
+    else:
+        return None
+    
+def get_guild_name(gdata):
+    gname = get_value_from_json(gdata, 'guild.name')
+    return gname
+
+def get_uuids_in_guild(json_obj):
+    g_uuids = []
+    g_members = get_value_from_json(json_obj, f'guild.members')
+    for g_member in g_members:
+        g_uuid = g_member['uuid']
+        g_uuids.append(g_uuid)
+    return g_uuids
+
+def check_if_guild_is_null(gdata):
+    inGuild = True
+    gnull = get_value_from_json(gdata, 'guild')
+    if gnull == None:
+        inGuild = False
+    return inGuild
