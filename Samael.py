@@ -17,8 +17,6 @@ lists_directory = os.path.join(samael_dir, 'Lists')
 config_file = os.path.join(samael_dir, 'config.ini')
 config_ini = configparser.ConfigParser()
 
-clearforclear = True
-
 lunarlatestlog = os.path.join(home_dir, '.lunarclient', 'offline', 'multiver', 'logs', 'latest.log')
 blacklist = os.path.join(lists_directory, 'Blacklist.log')
 safelist = os.path.join(lists_directory, 'Safelist.log')
@@ -113,7 +111,6 @@ def readcfg():
             # [user]
             samaeluser = config_ini.get('user', 'username')
             if samaeluser == 'your username':
-                clearforclear = False
                 samaeluser = input('Enter your minecraft username: ')
             
             nick = config_ini.get('user', 'nick')
@@ -131,7 +128,6 @@ def readcfg():
             # [paths]
             chat = config_ini.get('paths', 'chat')
             if chat == r'C:\Users\User\.lunarclient\offline\multiver\logs\latest.log':
-                clearforclear = False
                 chat = lunarlatestlog
                 print(f'Using lunar client chat path by default: {lunarlatestlog}')
             
@@ -237,7 +233,7 @@ def omgnick():
     print(f"{c.LightMagenta} >> {c.bgMagenta}{c.Black} NICK OMG WTF DODGE NICK DODGE!! {c.bgDefault}{c.LightMagenta} <<")
     print(f"{c.bgDefault}{c.LightMagenta}      -----------------------------    {c.White}")
 
-if clearforclear: clear()
+clear()
 # splash screen
 Samael_text(c.Red)                                                                                         
 print(f"{c.bgDefault}{c.White}\n {c.stBold}>>> Version {version}{c.allDefault}")
