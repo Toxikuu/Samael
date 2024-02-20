@@ -16,9 +16,6 @@ rem Create the installation directory
 mkdir %INSTALL_DIR%
 
 echo Installing Python %PYTHON_VERSION%
-echo
-echo
-echo
 
 rem Download Python installer using PowerShell
 %PS% -Command "Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile 'python-installer.exe'"
